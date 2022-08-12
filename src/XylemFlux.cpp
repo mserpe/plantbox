@@ -4,10 +4,6 @@
 #include <algorithm>
 #include <set>
 
-#ifdef USE_PHOTOSYNTHESIS
-#include <Eigen/Dense>
-#include <Eigen/Sparse> 
-#endif
 namespace CPlantBox {
 
 
@@ -25,7 +21,7 @@ XylemFlux::XylemFlux(std::shared_ptr<CPlantBox::MappedSegments> rs): rs(rs){}
  * @param cells 			sx per cell (true), or segments (false)
  * @param soil_k [day-1]    optionally, soil conductivities can be prescribed per segment,
  *                          conductivity at the root surface will be limited by the value, i.e. kr = min(kr_root, k_soil)
-* @param withEigen			use Eigen solve (true), ot not (false = default)
+* @param withEigen			use Eigen solve (true), ot not (false = default). == True when called by @see Photosynthesis::linearSystemSolve
  */
 void XylemFlux::linearSystem(double simTime, const std::vector<double>& sx, bool cells, const std::vector<double> soil_k, bool withEigen)
 {
@@ -41,14 +37,14 @@ void XylemFlux::linearSystem(double simTime, const std::vector<double>& sx, bool
     std::fill(aJ.begin(), aJ.end(), 0);
     size_t k=0;
     size_t numleaf = 0;
-#ifdef USE_PHOTOSYNTHESIS
+	
 	typedef Eigen::Triplet<double> Tri;
-	std::vector<Tri> tripletList;
+	tripletList.clear();
 	tripletList.reserve(Ns*4);
+	b = Eigen::VectorXd(N);
 	Eigen::SparseMatrix<double> mat(N,N);
 	mat.reserve(Eigen::VectorXi::Constant(N,2));
-	Eigen::VectorXd b(N);
-#endif
+	
     for (int si = 0; si<Ns; si++) {
 
         int i = rs->segments[si].x;
@@ -104,10 +100,10 @@ void XylemFlux::linearSystem(double simTime, const std::vector<double>& sx, bool
             // std::cout << "XylemFlux::linearSystem: warning segment length smaller 1.e-5 \n";
             l = 1.e-5; // valid quick fix? (also in segFluxes)
         }
-		double perimeter;//perimeter of exchange surface 
+		double perimeter;//perimeter of exchange surface
         if (organType == Organism::ot_leaf) {
-			//perimeter of the leaf blade 
-			// "*2" => C3 plant has stomatas on both sides. 
+			//perimeter of the leaf blade
+			// "*2" => C3 plant has stomatas on both sides.
 			//later make it as option to have C4, i.e., stomatas on one side
 			perimeter = rs->leafBladeSurface[si] / l *2;
             numleaf +=1;
@@ -131,60 +127,39 @@ void XylemFlux::linearSystem(double simTime, const std::vector<double>& sx, bool
         }
 
         aB[i] += ( bi + cii * psi_s +cij * psi_s) ;
-#ifdef USE_PHOTOSYNTHESIS
+		
 		if(withEigen){ //when build with photosynthesis but do not want to use eigensolve
 			b(i) = aB[i];
 			tripletList.push_back(Tri(i,i,cii));
+		}else{
+			aI[k] = i; aJ[k]= i; aV[k] = cii;
 		}
-		
-#endif
-        aI[k] = i; aJ[k]= i; aV[k] = cii;
         k += 1;
-#ifdef USE_PHOTOSYNTHESIS
-		if(withEigen){ tripletList.push_back(Tri(i,j,cij));}
-#endif
-        aI[k] = i; aJ[k] = j;  aV[k] = cij;
+		
+		if(withEigen){ tripletList.push_back(Tri(i,j,cij));
+		}else{		
+			aI[k] = i; aJ[k] = j;  aV[k] = cij;
+		}
         k += 1;
 
         int ii = i;
         i = j;  j = ii; // edge ji
         aB[i] += ( -bi + cii * psi_s +cij * psi_s) ; // (-bi) Eqn (14) with changed sign
-#ifdef USE_PHOTOSYNTHESIS
-		if(withEigen){ 
+
+		if(withEigen){
 			b(i) = aB[i];
 			tripletList.push_back(Tri(i,i,cii));
+		}else{
+			aI[k] = i; aJ[k]= i; aV[k] = cii;
 		}
-#endif
-        aI[k] = i; aJ[k]= i; aV[k] = cii;
         k += 1;
-#ifdef USE_PHOTOSYNTHESIS
-		if(withEigen){ tripletList.push_back(Tri(i,j,cij));}
-#endif
-        aI[k] = i; aJ[k] = j;  aV[k] = cij;
+		
+		if(withEigen){ tripletList.push_back(Tri(i,j,cij));
+		}else{
+			aI[k] = i; aJ[k] = j;  aV[k] = cij;
+		}
         k += 1;
     }
-#ifdef USE_PHOTOSYNTHESIS
-	if(withEigen){ 
-		mat.setFromTriplets(tripletList.begin(), tripletList.end());
-		mat.makeCompressed();
-		Eigen::SparseLU<Eigen::SparseMatrix<double>> lu;
-		lu.compute(mat);
-		
-		if(lu.info() != Eigen::Success){
-			std::cout << "XylemFlux::linearSystem  matrix Compute with Eigen failed: " << lu.info() << std::endl;
-			assert(false);
-		}
-		
-		Eigen::VectorXd v2;
-		try{ 
-			v2= lu.solve(b);
-		}catch(...){
-			assert(false&&"XylemFlux::linearSystem error when solving wat. pot. xylem with Eigen ");
-		}
-		std::vector<double> v3(&v2[0], v2.data()+v2.cols()*v2.rows());
-		psiXyl = v3;
-	}
-#endif
 }
 
 
@@ -281,10 +256,10 @@ std::vector<double> XylemFlux::segFluxes(double simTime, const std::vector<doubl
             l = 1.e-5; // valid quick fix? (also in segFluxes)
         }
 
-		double perimeter;//perimeter of exchange surface 
+		double perimeter;//perimeter of exchange surface
         if (organType == Organism::ot_leaf) {
-			//perimeter of the leaf blade 
-			// "*2" => C3 plant has stomatas on both sides. 
+			//perimeter of the leaf blade
+			// "*2" => C3 plant has stomatas on both sides.
 			//later make it as option to have C4, i.e., stomatas on one side
 			perimeter = rs->leafBladeSurface[si] / l *2;
             numleaf +=1;
@@ -348,7 +323,7 @@ std::map<int,double> XylemFlux::sumSegFluxes(const std::vector<double>& segFluxe
  */
 std::vector<double> XylemFlux::splitSoilFluxes(const std::vector<double>& soilFluxes, int type) const
 {
-    auto lengths =  this->segLength();
+    auto lengths =  this->rs->segLength();
     std::vector<double> fluxes = std::vector<double>(rs->segments.size());
     std::fill(fluxes.begin(), fluxes.end(), 0.);
     auto map = rs->cell2seg;

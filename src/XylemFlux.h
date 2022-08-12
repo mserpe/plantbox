@@ -3,6 +3,8 @@
 #define XYLEM_FLUX_H_
 
 #include "MappedOrganism.h"
+#include <external/Eigen/Dense>
+#include <external/Eigen/Sparse> 
 
 namespace CPlantBox {
 
@@ -33,10 +35,6 @@ public:
 
     std::vector<double> splitSoilFluxes(const std::vector<double>& soilFluxes, int type = 0) const; ///< splits soil fluxes (per cell) into segment fluxes
 
-    /** moved these to MappedSegments (TODO check for dependency and remove )**/
-    std::vector<double> segOuterRadii(int type = 0, const std::vector<double>& vols = std::vector<double>(0)) const { return rs->segOuterRadii(type, vols); } ///< outer cylinder radii to match cell volume
-    std::vector<double> segLength() const { return rs->segLength(); }  ///< calculates segment lengths [cm]
-
     std::vector<int> aI; // to assemble the sparse matrix on the Python side
     std::vector<int> aJ;
     std::vector<double> aV;
@@ -56,9 +54,9 @@ public:
 
    std::function<double(int, double, int, int, int)> kr_f = [](int si, double age, int type, int orgtype, int numleaf){
 		throw std::runtime_error("kr_f not implemented"); return 0.; };
-    std::function<double(int, double,int,int)> kx_f = [](int si, double age, int type, int orgtype) { 
+    std::function<double(int, double,int,int)> kx_f = [](int si, double age, int type, int orgtype) {
 		throw std::runtime_error("kx_f not implemented"); return 1.; };
-    
+
     std::vector<double> getEffKr(double simtime);
     std::vector<double> getKx(double simtime);
     std::vector<double> getHs(const std::vector<double>& sx);
@@ -73,81 +71,80 @@ public:
 
     double psi_air = -954378; // air water potential [cm] for T = 20°C and RH = 0.5
 	std::vector<double> k_stomatas;//stomatal radial conductance for Photosynthesis
-	std::vector<double> psiXyl; //saves the wat. pot. values of xylem for photosynthesis and phloem modules
-
+	
 protected:
 
 	//type correspond to subtype or to the leaf segment number
     double kr_const(int si,double age, int type, int organType, int numleaf) //k constant
-	{ 
+	{
 		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr.at(0).at(0) + 1/k_stomatas.at(numleaf));}else{return 0;}
-		} else { return kr.at(0).at(0); } 
-	} 
-    
-	double kr_perOrgType(int si,double age, int type, int organType, int numleaf) 
-	{ 
-		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+		} else { return kr.at(0).at(0); }
+	}
+
+	double kr_perOrgType(int si,double age, int type, int organType, int numleaf)
+	{
+		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr.at(organType - 2).at(0) + 1/k_stomatas.at(numleaf));}else{return 0;}
 		} else { return kr.at(organType - 2).at(0); }
 	} //per organ type (goes from 2 (root) to 4 (leaf))
-    double kr_perType(int si,double age, int type, int organType, int numleaf) 
-	{ 
-		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+    double kr_perType(int si,double age, int type, int organType, int numleaf)
+	{
+		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr.at(organType - 2).at(type) + 1/k_stomatas.at(numleaf));}else{return 0;}
 		} else { return kr.at(organType - 2).at(type); }
 	}//per subtype and organ type (goes from 2 (root) to 4 (leaf))
-    double kr_table(int si,double age, int type, int organType, int numleaf) 
+    double kr_table(int si,double age, int type, int organType, int numleaf)
 	{
 		double kr_ = Function::interp1(age, kr_t.at(0), kr.at(0));
-		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr_ + 1/k_stomatas.at(numleaf));}else{return 0;}
 		} else { return kr_; }
 	} //constant for all type/subtype and age dependant
-	
-	
+
+
 	double kr_tablePerOrgType(int si,double age, int type, int organType, int numleaf)
-	{ 
+	{
 		double kr_ = Function::interp1(age, krs_t.at(organType-2).at(0), krs.at(organType-2).at(0));
-		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr_ + 1/k_stomatas.at(numleaf));}else{return 0;}
-		} else  { return kr_; } 
+		} else  { return kr_; }
 	}//constant for all subtype but type and age dependant
-	
+
 		double kr_tablePerType(int si,double age, int type, int organType, int numleaf) {
 		double kr_ = Function::interp1(age, krs_t.at(organType-2).at(type), krs.at(organType-2).at(type));
-	    if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+	    if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr_ + 1/k_stomatas.at(numleaf));}else{return 0;}
 		} else {return kr_;}
 	} //subtype, type and age dependant
-	double kr_valuePerSegment(int si, double age, int type, int organType, int numleaf) 
-	{ 
-		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0)) 
+	double kr_valuePerSegment(int si, double age, int type, int organType, int numleaf)
+	{
+		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
 			if(k_stomatas.at(numleaf) > 0){return 1/(1/kr.at(0).at(si) + 1/k_stomatas.at(numleaf));}else{return 0;}
 		} else { return kr.at(0).at(si); }
 	}
 	double kr_RootExchangeZonePerType(int si,double age, int type, int organType, int numleaf)//when use carbon- and water-limited growth, canNOT use "kr_tablePerType" instead of this function
-	{ 
+	{
 		if ((organType == Organism::ot_leaf) && (k_stomatas.size() > 0))
 		{
-			
+
 			if(k_stomatas.at(numleaf) > 0){
 				return 1/(1/kr.at(organType - 2).at(type) + 1/k_stomatas.at(numleaf));}else{return 0;}
-		} 
+		}
 		if (organType == Organism::ot_root){
 			double coef = rs->exchangeZoneCoefs.at(si);//% of segment length in the root exchange zone, see MappedPlant::simulate
-			return coef * kr.at(organType - 2).at(type); 
+			return coef * kr.at(organType - 2).at(type);
 		}
-		return kr.at(organType - 2).at(type);  
+		return kr.at(organType - 2).at(type);
 	} //subtype, type and depend on distance to tip for roots
-	
+
     double kx_const(int si,double age, int type, int organType) { return kx.at(0).at(0); } //k constant
     double kx_perOrgType(int si,double age, int type, int organType) { return kx.at(organType - 2)[0]; } //per organ type (goes from 2 (root) to 4 (leaf))
     double kx_perType(int si,double age, int type, int organType) { return kx.at(organType - 2).at(type); } //per subtype and organ type (goes from 2 (root) to 4 (leaf))
@@ -155,7 +152,10 @@ protected:
     double kx_tablePerOrgType(int si,double age, int type, int organType) { return Function::interp1(age, kxs_t.at(organType-2).at(0), kxs.at(organType-2).at(0)); } //constant for all subtype but type and age dependant
     double kx_tablePerType(int si,double age, int type, int organType) { return Function::interp1(age, kxs_t.at(organType-2).at(type), kxs.at(organType-2).at(type)); } //subtype, type and age dependant
     double kx_valuePerSegment(int si, double age, int type, int organType) { return kx.at(0).at(si); };
-
+	
+	//for Photosynthesis::linearSystemSolve
+	std::vector<Eigen::Triplet<double>> tripletList; 
+	Eigen::VectorXd b;
 };
 
 } // namespace

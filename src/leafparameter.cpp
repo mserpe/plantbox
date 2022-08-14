@@ -87,9 +87,10 @@ std::shared_ptr<OrganSpecificParameter> LeafRandomParameter::realize()
 	std::vector<double> ln_; // stores the inter-distances
 	double res;
 	int nob_real = 0; //number of branching nodes
-	if((shapeType == shape_2D)&&(leafGeometryPhi.size()==0))//because default value of shapeType is shape_2D
+	if((shapeType == shape_2D)&&(leafGeometry.size()==0))//because default value of shapeType is shape_2D
 	{
-		std::cout<<"shapeType set to shape_2D but no 2D shape data given, set shapeType to cylinder"<<std::endl;
+		std::cout<<leafGeometry.size()<<std::endl;
+		std::cout<<"for leaf subType "<<subType<<", shapeType set to shape_2D but no 2D shape data given, set shapeType to cylinder"<<std::endl;
 		shapeType = shape_cylinder;
 	}
 	if (dx <= dxMin){
@@ -483,6 +484,8 @@ void LeafRandomParameter::createLeafRadialGeometry(std::vector<double> phi, std:
 			leafGeometry.at(i) = x;
 		}
 		normalizeLeafNodes();
+		std::cout<<"for leaf subType "<<subType<<", leafGeometry.size() is "<<leafGeometry.size()<<std::endl;
+		
 	} else {
 		std::cout << "LeafRandomParameter::createLeafRadialGeometry: Warning! parametrisation vectors y and l are empty or differ in size\n";
 	}

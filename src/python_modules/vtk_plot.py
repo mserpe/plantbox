@@ -71,7 +71,6 @@ def create_leaf(leaf, leaf_points, leaf_polys):
 
         ln1 = leaf.getLeafVis(i)
         ln2 = leaf.getLeafVis(i + 1)
-
         if len(ln1) > 0 or len(ln2) > 0:
             n1 = leaf.getNode(i)
             n2 = leaf.getNode(i + 1)

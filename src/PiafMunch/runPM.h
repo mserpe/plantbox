@@ -199,7 +199,7 @@ class PhloemFlux: public CPlantBox::Photosynthesis
 	bool update_viscosity_ = true;
 	bool usePsiXyl = true;//use PsiXyl value of xylem tissue
 	bool sameVolume_meso_seg = true; //use same volume for mesophyll and leaf blade compartment?
-	bool sameVolume_meso_st = true; //use same volume for mesophyll and leaf st compartment?
+	bool sameVolume_meso_st = false; //use same volume for mesophyll and leaf st compartment?
 	bool withInitVal = false;//use initValST and initValMeso
 	int solver = 1;//which solver to use
 	bool doTroubleshooting =false; //do extra printing

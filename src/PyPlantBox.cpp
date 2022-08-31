@@ -775,7 +775,7 @@ PYBIND11_MODULE(plantbox, m) {
      * RootSystem.h
      */
     py::class_<RootSystem, Organism, std::shared_ptr<RootSystem>>(m, "RootSystem")
-            .def(py::init<>())
+            .def(py::init<double>(),  py::arg("seednum") = 0)
             .def("getRootRandomParameter", (std::shared_ptr<RootRandomParameter> (RootSystem::*)(int) const) &RootSystem::getRootRandomParameter)
             .def("getRootRandomParameter", (std::vector<std::shared_ptr<RootRandomParameter>> (RootSystem::*)() const) &RootSystem::getRootRandomParameter)
             .def("setRootSystemParameter", &RootSystem::setRootSystemParameter)

@@ -508,4 +508,17 @@ double Organ::orgVolume(double length_,  bool realized) const
 	if(length_ == -1){length_ = getLength(realized);}
 	return M_PI * length_ * param_->a * param_->a;//cylinder
 };
+
+
+
+/**
+ * get 3D surface of the organ
+ * to fill with actual function
+ * @return vector with x, y, z coodinates defining the organ's surface
+ */
+std::vector<double> Organ::get3DShape() const
+{
+	std::vector<double> surface;
+	return surface;
+};
 }

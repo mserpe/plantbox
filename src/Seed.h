@@ -31,6 +31,8 @@ public:
 
     void initialize(bool verbose = true);
 
+    std::vector<double> get3DShape() const override;
+
     std::shared_ptr<const SeedSpecificParameter> param() const { return std::static_pointer_cast<const SeedSpecificParameter>(param_); }
 
     int getNumberOfRootCrowns() const { return numberOfRootCrowns; } // for rootsystem initialisation

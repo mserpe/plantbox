@@ -39,6 +39,8 @@ public:
     double getParameter(std::string name) const override; ///< returns an organ pa:vector<CPlantBox::Vector3d>::size_type)’
     std::string toString() const override;
 
+    std::vector<double> get3DShape() const override;
+
     /* From analytical equations */
     double calcCreationTime(double length, double dt); ///< analytical creation (=emergence) time of a node at a length
     double calcLength(double age); ///< analytical length of the root

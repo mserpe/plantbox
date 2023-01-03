@@ -628,6 +628,11 @@ std::vector<Vector3d> Leaf::getLeafVis(int i)
 	}
 }
 
+std::vector<double> Leaf::get3DShape() const
+{
+  return Organ::get3DShape();
+}
+
 /**
  * Analytical creation (=emergence) time of a node at a length along the leaf
  *

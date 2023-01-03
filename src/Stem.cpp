@@ -839,4 +839,9 @@ std::string Stem::toString() const
 	return Organ::toString()+newstring.str();
 }
 
+std::vector<double> Stem::get3DShape() const
+{
+  return Organ::get3DShape();
+}
+
 } // namespace CPlantBox

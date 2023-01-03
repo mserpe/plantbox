@@ -50,6 +50,8 @@ public:
 	std::vector<double> getLeafVisX(int i);
 	std::vector<Vector3d> getLeafVis(int i); // per node
 
+    std::vector<double> get3DShape() const override;
+
     std::string toString() const override;
 
 	/* exact from analytical equations */

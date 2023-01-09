@@ -4,6 +4,10 @@
 #include "Root.h"
 #include "Plant.h"
 #include <algorithm>
+#include <span>
+#include <vector>
+#include <numeric>
+#include <cmath>
 
 namespace CPlantBox {
 
@@ -470,7 +474,6 @@ void Stem::createLateral(bool silence)
 
 }
 
-
 /*
  *
  */
@@ -628,7 +631,6 @@ Vector3d Stem::getIncrement(const Vector3d& p, double sdx, int n)
 	Vector3d sv = ons.times(Vector3d::rotAB(ab.x,ab.y));
 	return sv.times(sdx);
 }
-
 
 /**
  * @return Current absolute heading of the organ at node n, based on initial heading, or direction of the segment going from node n-1 to node n
@@ -837,11 +839,6 @@ std::string Stem::toString() const
 	std::stringstream newstring;
 	newstring << "; initial heading: " << iHeading.toString() << ", parent node index" << parentNI << ".";
 	return Organ::toString()+newstring.str();
-}
-
-std::vector<double> Stem::get3DShape() const
-{
-  return Organ::get3DShape();
 }
 
 } // namespace CPlantBox

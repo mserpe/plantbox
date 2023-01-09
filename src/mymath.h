@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <vector>
 #include <functional>
+#include <limits>
 
 
 namespace CPlantBox {
@@ -53,7 +54,7 @@ class Vector2d
 {
 public:
 
-	Vector2d(): x(0), y(0) { } ///< Default constructor
+	Vector2d() = default;
 	Vector2d(double x_, double y_): x(x_),y(y_) { } ///< Constructor passing two doubles
 	Vector2d(const Vector2d& v): x(v.x), y(v.y) { } ///< Copy Constructor
 	Vector2d(const std::vector<double>& xx): x(xx.at(0)), y(xx.at(1)) { } ///< for Python coupling
@@ -64,11 +65,10 @@ public:
 		return strs.str();
 	} ///< creates a string representing the two doubles
 
-	double x; ///< number 1
-	double y; ///< number 2
+	double x{0.0}; ///< number 1
+	double y{0.0}; ///< number 2
 
 };
-
 
 
 /**
@@ -89,8 +89,10 @@ public:
 	};
 
 	void normalize() { double l=length(); x/=l; y/=l; z/=l; } ///< normalizes the vector
+  Vector3d normalized() const { double l=length(); return Vector3d(x/l,y/l,z/l); } ///< returns the normalized vector
+  Vector3d scaledTo(double s) const { double l=length(); return Vector3d(x*s/l,y*s/l,z*s/l); } ///< returns the vector scaled to a given length
 
-	double times(const Vector3d& v) const { return v.x*x+v.y*y+v.z*z; } ///< inner product
+	double times(const Vector3d& v) const { return v.x*x+v.y*y+v.z*z; } ///< inner product (dot product, officially)
 	double length() const { return sqrt(x*x+y*y+z*z); } ///< returns the Euclidian length
 
 	Vector3d times(const double s) const { return Vector3d(s*x,s*y,s*z); } ///< returns the vector multiplied by a scalar value
@@ -98,11 +100,21 @@ public:
 	Vector3d minus(const Vector3d& v) const { return Vector3d(x-v.x,y-v.y,z-v.z); } ///< subtracts a vector and returns the result
 	Vector3d cross(const Vector3d& v) const { return Vector3d(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x); } ///< takes the cross product
 
+  Vector3d operator+(const Vector3d& v) const { return plus(v); } ///< adds a vector and returns the result
+  Vector3d operator-(const Vector3d& v) const { return minus(v); } ///< subtracts a vector and returns the result
+  Vector3d operator*(const double s) const { return times(s); } ///< returns the vector multiplied by a scalar value
+  Vector3d operator/(const double s) const { return times(1.0/s); } ///< returns the vector divided by a scalar value
+  Vector3d operator-() const { return times(-1.0); } ///< returns the vector multiplied by -1
+  friend Vector3d operator*(const double s, const Vector3d& v) { return v.times(s); } ///< commutative multiplication
+  friend Vector3d operator/(const double s, const Vector3d& v) { return v.times(1.0/s); } ///< commutative division
+
 	std::string toString() const {
 		std::ostringstream strs;
 		strs << "( "<<x<<", "<<y<<", "<<z<<" )";
 		return strs.str();
 	} ///< creates a string representing the three doubles
+
+  
 
 	double x; ///< double number 1
 	double y; ///< double number 2
@@ -112,8 +124,6 @@ public:
 
 inline bool operator==(const Vector3d& lhs, const Vector3d& rhs){ return ((lhs.x==rhs.x) && (lhs.y==rhs.y) && (lhs.z==rhs.z)); } // needed for boost python indexing suite
 inline bool operator!=(const Vector3d& lhs, const Vector3d& rhs){ return !(lhs == rhs); }
-
-
 
 /**
  * 3x3 Matrix class, compatible with Vector3d for basic linear algebra
@@ -242,7 +252,243 @@ public:
 
 };
 
+/**
+ * Quaternion class with common functions for CG
+ * this is for general Quaternions, but we use it for H0 and H1
+*/
+class Quaternion {
+  public:
+    Quaternion() = default;
+    ~Quaternion() = default;
+    Quaternion(double w, Vector3d v) : w(w), v(v) {}
+    Quaternion(const Quaternion& q) : w(q.w), v(q.v) {}
+    Quaternion(Quaternion&& q) : w(q.w), v(q.v) {}
+    Quaternion(std::initializer_list<double> l) {
+      assert(l.size() == 4);
+      auto it = l.begin();
+      w = *it;
+      ++it;
+      v = Vector3d(*it, *(it+1), *(it+2));
+    }
 
+    Quaternion& operator=(const Quaternion& q) { w = q.w; v = q.v; return *this; }
+
+    Quaternion& operator=(Quaternion&& q) { w = q.w; v = q.v; return *this; }
+
+    Quaternion operator+(const Quaternion& q) const { return Quaternion(w + q.w, v + q.v); }
+
+    Quaternion operator-(const Quaternion& q) const { return Quaternion(w - q.w, v - q.v); }
+
+    Quaternion operator*(const Quaternion& q) const {
+      return Quaternion(w * q.w - v.times(q.v), q.v.times(w) + v.times(q.w) + v.cross(q.v));
+    }
+
+    friend Quaternion operator*(double s, const Quaternion& q) { return Quaternion(q.w * s, q.v * s); }
+
+    Quaternion operator*(double s) const { return Quaternion(w * s, v * s); }
+
+    Quaternion operator/(double s) const { return Quaternion(w / s, v / s); }
+
+    Quaternion operator-() const { return Quaternion(-w, -v); }
+
+    double& operator[](int i) {
+      assert((i >= 0) && (i < 4));
+      switch (i) {
+        case 0: return w;
+        case 1: return v.x;
+        case 2: return v.y;
+        case 3: return v.z;
+      }
+      throw 0; // just to not produce a warning
+    }
+
+    Quaternion& operator+=(const Quaternion& q) {
+      w += q.w;
+      v = v + q.v;
+      return *this;
+    }
+
+    Quaternion& operator-=(const Quaternion& q) {
+      w -= q.w;
+      v = v - q.v;
+      return *this;
+    }
+
+    Quaternion& operator*=(const Quaternion& q) {
+      w = w * q.w - v.times(q.v);
+      v = w * q.v + v * q.w + v.cross(q.v);
+      return *this;
+    }
+
+    Quaternion& operator*=(double s) {
+      w *= s;
+      v = v * s;
+      return *this;
+    }
+
+    Quaternion& operator/=(double s) {
+      w /= s;
+      v = v / s;
+      return *this;
+    }
+
+    Quaternion conjugate() const {
+      return Quaternion(w, -v);
+    }
+
+    Quaternion inverse() const {
+      return conjugate() / norm2();
+    }
+
+    Quaternion inverse2() const {
+      return conjugate() / (w * w + v.times(v));
+    }
+
+    void invert() {
+      *this = inverse();
+    }
+    void conjugateInPlace() {
+      v = -v;
+    }
+
+    inline double norm() const {
+      return std::sqrt(w * w + v.times(v));
+    }
+
+    inline double norm2() const {
+      return w * w + v.times(v);
+    }
+
+    inline Quaternion normalized() const {
+      return *this / norm();
+    }
+
+    void normalize() {
+      *this /= norm();
+    }
+
+    double dot(const Quaternion& q) const {
+      return w * q.w + v.times(q.v);
+    }
+
+    /**
+     * @brief Rotates a vector by the quaternion
+     * @param v vector to rotate
+     * @return rotated vector
+     * @note the formula is v' = q * v * q^-1
+    */
+    Vector3d Rotate(const Vector3d& v) const {
+      return (*this * Quaternion(0, v) * this->conjugate()).v;
+    }
+
+    /**
+     * @brief Converts the quaternion to a 3x3 rotation matrix
+     * @return 3x3 rotation matrix
+     * @note this is essentially the same as rotating the axis vectors by the quaternion
+    */
+    Matrix3d ToMatrix3d() const {
+      return {{1 - 2 * v.y * v.y - 2 * v.z * v.z, 2 * v.x * v.y - 2 * w * v.z, 2 * v.x * v.z + 2 * w * v.y},
+      {2 * v.x * v.y + 2 * w * v.z, 1 - 2 * v.x * v.x - 2 * v.z * v.z, 2 * v.y * v.z - 2 * w * v.x},
+      {2 * v.x * v.z - 2 * w * v.y, 2 * v.y * v.z + 2 * w * v.x, 1 - 2 * v.x * v.x - 2 * v.y * v.y}};
+    }
+
+    static Quaternion FromMatrix3d(const Matrix3d& m)
+    {
+      double w = std::sqrt(1 + m.r0.x + m.r1.y + m.r2.z) / 2.0;
+      double w4 = (4 * w);
+      double x = (m.r0.y - m.r1.z) / w4;
+      double y = (m.r0.z - m.r2.x) / w4;
+      double z = (m.r1.x - m.r0.y) / w4;
+      return Quaternion(w, Vector3d(x, y, z));
+    }
+
+    // a method that returns a look-at-direction representing the local x axis
+    // TODO: PLEASE check with daniel about coordinate axis conventions!!
+    Vector3d Forward() const 
+    {
+      return Rotate(Vector3d(1,0,0));
+    }
+
+    // a method that returns a look-at-direction representing the local y axis
+    // TODO: SOON check with daniel about coordinate axis conventions!!
+    Vector3d Right() const 
+    {
+      return Rotate(Vector3d(0,1,0));
+    }
+
+    // a method that returns a look-at-direction representing the local z axis
+    // TODO: NOW check with daniel about coordinate axis conventions!!
+    Vector3d Up() const 
+    {
+      return Rotate(Vector3d(0,0,1));
+    }
+
+    // a method that computes the normed linear sum of axis vectors
+    // as I always use it with a set length, I am not normalizing the result
+    Vector3d Axis(int x = 0, int y = 0, int z = 0) const
+    {
+      return (Forward() * x + Right() * y + Up() * z);
+    }
+
+    /**
+     * @brief Static method to compute look-at-direction between two points
+     * @param from the point to look from
+     * @param to the point to look at
+     * @param up the up direction
+    */
+    static Quaternion LookAt(const Vector3d& from, const Vector3d& to, const Vector3d& up)
+    {
+      // compute the forward direction
+      auto forward = (to - from).normalized();
+      // compute the right direction
+      auto right = forward.cross(up).normalized();
+      // compute the up direction
+      auto up2 = right.cross(forward).normalized();
+      // compute the rotation matrix
+      Matrix3d m = {right, up2, -forward};
+      // return the quaternion
+      return FromMatrix3d(m);
+    }
+
+    // This Method calculates the Quaternion that rotates a to b
+    // this is basically the same as the implementation in the Unreal Engine
+    inline static Quaternion geodesicRotation(Vector3d a, Vector3d b)
+    {
+      auto w = a.times(b);
+      // if the vectors are parallel, the rotation axis is undefined
+      if(w < std::numeric_limits<double>::epsilon() && std::abs(a.x) <= std::abs(a.z))
+        return Quaternion(w, Vector3d(0, -a.z, a.y));
+      // case 2 of the above
+      else if(w < std::numeric_limits<double>::epsilon() && std::abs(a.x) > std::abs(a.z))
+        return Quaternion(w, Vector3d(-a.y, a.x, 0));
+      // otherwise, the rotation axis is the cross product of a and b
+      else
+        return Quaternion(w, a.cross(b)).normalized();
+    }
+
+    // this method provides a spherical interpolation between two quaternions
+    inline static Quaternion SphericalInterpolation(Quaternion a, Quaternion b, double t = 0.5)
+    {
+      double angle = a.dot(b);
+      if (angle >= 1.0) ///< if angle is 1.0, the quaternions are the same
+      {
+        return a;
+      }
+      double half = acos(angle);
+      double sinHalf = sin(half);
+      if(std::abs(sinHalf) < std::numeric_limits<double>::epsilon()) //< if angle is 0.0, the quaternions are opposite
+      {
+        return {0.5*a.w + 0.5*b.w, 0.5*a.v + 0.5*b.v};
+      }
+      //< otherwise, interpolate
+      double ratioA = sin((1.0 - t) * half) / sinHalf;
+      double ratioB = sin(t * half) / sinHalf;
+      return {ratioA * a.w + ratioB * b.w, ratioA * a.v + ratioB * b.v};
+    }
+
+    double w{};
+    Vector3d v{};
+};
 
 /**
  * usefull
@@ -251,7 +497,7 @@ class Function {
 public:
 
 	/**
-	 * trapezoidal rule  (needed in dumux-rosi schröder)
+	 * trapezoidal rule  (needed in dumux-rosi schroeder)
 	 */
 	static double quad(std::function<double(double)> f, double a, double b, int n) {
 		double h = (b-a)/n;
@@ -302,12 +548,103 @@ public:
 		double ipLinear = (x - x_[lookUpIndex-1])/(x_[lookUpIndex] - x_[lookUpIndex-1]);
 		return (1.-ipLinear)*y_[lookUpIndex-1] + (ipLinear)*y_[lookUpIndex];
 	}
+  
+  /**
+   * Checks if a point is inside a cone frustum
+   * (which is a cylinder with two different radii)
+   * @param p point
+   * @param x0 cone base center
+   * @param r0 cone base radius
+   * @param x1 cone top center
+   * @param r1 cone top radius
+  */
+ bool isInsideFrustum(Vector3d p, Vector3d x0, double r0, Vector3d x1, double r1)
+ {
+   // compiler should be able to optimize this
+    Vector3d v = x1-x0;
+    Vector3d w = p-x0;
+    double c1 = w.times(v);
+    double c2 = v.times(v);
+    double b = c1/c2;
+    double r = r0 + b*(r1-r0);
+    return (p-x0-b*v).length() < r;
+ }
 
 };
 
+/**
+ * Catmull-Rom spline interpolation
+*/
+class CatmullRomSpline {
+  public:
+  CatmullRomSpline() = default;
+  CatmullRomSpline(std::vector<Vector3d> y) : y(y) {
+    computeT();
+  }
+
+  void setY(std::vector<Vector3d> y) {
+    this->y = y;
+    computeT();
+  }
+  Vector3d operator() (double t) const {
+    int i = std::min(std::max(0, int(t)), int(y.size()-2)); // size returns unsigned so int()
+    return computeY(t, i);
+  }
+  private:
+  
+  /**
+   * Computes the Catmull-Rom spline interpolation
+   * This works iteratively, so it is not very efficient
+   * It takes into account all the points in the spline
+   * As it modifies the allocated memory, it is not thread safe
+   * Because stages_y is mutable, this method is also const
+   * @param t the parameter
+   * @param i the index of the point
+  */
+  Vector3d computeY(double t, int i) const {
+    t = (t - yt[i]) / (yt[i+1] - yt[i]);
+    if (stages_y[i].size() == 1) {
+      return stages_y[i][0];
+    }
+    for (int j = 0; j < stages_y[0].size(); j++) {
+      stages_y[0][j] = (yt[j] - t) / (yt[j+1] - yt[j]) * y[j] + (t - yt[j]) / (yt[j+1] - yt[j]) * y[j+1];
+    }
+    for(int i = 1; i < stages_y.size(); i++) {
+      for(int j = 0; j < stages_y[i].size(); j++) {
+        stages_y[i][j] = (yt[j] - t) / (yt[j+1] - yt[j]) * stages_y[i-1][j] + (t - yt[j]) / (yt[j+1] - yt[j]) * stages_y[i-1][j+1];
+      }
+    }
+    return stages_y.back().back();
+  }
+
+/**
+ * Computes t values for the Catmull-Rom spline interpolation
+*/
+  void computeT()
+  {
+    yt.clear();
+    yt.push_back(0);
+    for(int i = 1; i < y.size(); i++)
+    {
+      yt.push_back(yt[i-1] + (y[i]-y[i-1]).length());
+    }
+    for(int i = 0; i < yt.size(); i++)
+    {
+      yt[i] /= yt.back();
+    }
+    for (int i = y.size(); i > 0; i--) {
+      stages_y.push_back(std::vector<Vector3d>(i));
+    }
+  }
 
 
+  std::vector<Vector3d> y;
+  std::vector<double> yt;
 
+  // this is a mutable property because it resets upon each call
+  // it is much nicer to prepare the memory before calling the interpolation
+  mutable std::vector<std::vector<Vector3d>> stages_y;
+};
 
 } // end namespace CPlantBox
 

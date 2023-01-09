@@ -431,9 +431,5 @@ std::string Root::toString() const
     return  Organ::toString()+newstring.str();
 }
 
-std::vector<double> Root::get3DShape() const
-{
-  return Organ::get3DShape();
-}
 
 } // end namespace CPlantBox

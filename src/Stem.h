@@ -43,8 +43,6 @@ public:
     double getLength(int i) const override;
     std::string toString() const override;
 
-    std::vector<double> get3DShape() const override;
-
     /* exact from analytical equations */
     double calcCreationTime(double lenght); ///< analytical creation (=emergence) time of a node at a length
     double calcLength(double age); ///< analytical length of the stem

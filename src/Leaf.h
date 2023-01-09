@@ -42,28 +42,26 @@ public:
     double leafLength( bool realized = false) const { return std::max(getLength(realized)-param()->lb, 0.); /* represents the leaf base*/ }; ///< leaf surface length [cm]
     double leafCenter( bool realized = false) const { return std::max(getLength(realized)-param()->la-param()->lb, 0.); }; ///< center of the radial parametrisation
     double leafArea( bool realized = false, bool withPetiole = false) const; ///< returns the leaf surface area, zero if there are lateral-leafs [cm2]
-	double leafAreaAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
-	double leafVolAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
-	double leafLengthAtSeg(int localSegId, bool withPetiole = false);
-	double getLength(int i) const override;
-	double getLength(bool realized = true) const; ///< length of the organ (realized => dependent on dx() and dxMin())
-	std::vector<double> getLeafVisX(int i);
-	std::vector<Vector3d> getLeafVis(int i); // per node
-
-    std::vector<double> get3DShape() const override;
+    double leafAreaAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
+    double leafVolAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
+    double leafLengthAtSeg(int localSegId, bool withPetiole = false);
+    double getLength(int i) const override;
+    double getLength(bool realized = true) const; ///< length of the organ (realized => dependent on dx() and dxMin())
+    std::vector<double> getLeafVisX(int i);
+    std::vector<Vector3d> getLeafVis(int i); // per node
 
     std::string toString() const override;
 
-	/* exact from analytical equations */
-	double calcCreationTime(double lenght); ///< analytical creation (=emergence) time of a node at a length
-	double calcLength(double age); ///< analytical length of the leaf
-	double calcAge(double length); ///< analytical age of the leaf
+    /* exact from analytical equations */
+    double calcCreationTime(double lenght); ///< analytical creation (=emergence) time of a node at a length
+    double calcLength(double age); ///< analytical length of the leaf
+    double calcAge(double length); ///< analytical age of the leaf
 
-	/* abbreviations */
-	std::shared_ptr<LeafRandomParameter> getLeafRandomParameter() const;  ///< root type parameter of this root
-	std::shared_ptr<const LeafSpecificParameter> param() const; ///< root parameter
+    /* abbreviations */
+    std::shared_ptr<LeafRandomParameter> getLeafRandomParameter() const;  ///< root type parameter of this root
+    std::shared_ptr<const LeafSpecificParameter> param() const; ///< root parameter
 
-	/* useful */
+	  /* useful */
     Vector3d heading(int n)  const override; ///< current (absolute) heading of the organs at node n
     Vector3d heading() const override {return heading( -1 ); } 
 	

@@ -176,11 +176,6 @@ void Seed::initialize(bool verbose)
 	}
 }
 
-std::vector<double> Seed::get3DShape() const
-{
-  return Organ::get3DShape();
-}
-
 /**
  * Creates a shallow copy of the seeds child organs.
  * Use: the rootsystem manages base root itself, and just uses Seed class for initialization

@@ -9,6 +9,24 @@
 
 namespace CPlantBox {
 
+  /** 
+   * Hidden Template method to write a set of vectors into a buffer
+   * @param buffer    the buffer
+   * @param offset    the offset in the buffer
+   * @param v...     the vectors
+   */
+  inline unsigned int vec2Buf(std::vector<double>& buffer, unsigned int offset, const Vector3d& v) {
+    buffer[offset] = v.x;
+    buffer[offset + 1] = v.y;
+    buffer[offset + 2] = v.z;
+    return offset + 3;
+  }
+  template<typename... Args>
+  inline unsigned int vec2Buf(std::vector<double>& buffer, unsigned int offset, const Vector3d& v, Args... args) {
+    offset = vec2Buf(buffer, offset, v);
+    return vec2Buf(buffer, offset, args...);
+  }
+
 /**
  * A static plant, as needed for flux computations, represented as
  *
@@ -566,8 +584,9 @@ void MappedRootSystem::simulate(double dt, bool verbose)
  * @param stochastic 	keep stochasticity in simulation? (default = true)
  * @param LB		 	implement length-based waiting time before growth (true) of laterals or delay-based (false)? (default = true)
  */
-void MappedPlant::initialize_(bool verbose, bool stochastic, bool LB) {
-	reset(); // just in case
+void MappedPlant::initialize_(bool verbose, bool stochastic, bool LB)
+{
+  reset(); // just in case
 	std::cout << "MappedPlant::initialize \n" << std::flush;
 	this->stochastic = stochastic;
 	if(LB){	Plant::initializeLB(verbose);
@@ -832,6 +851,209 @@ std::vector<int> MappedPlant::getNodeIds(int ot) const
 		}
     }
 	return nodeId;
+}
+
+void MappedPlant::ComputeGeometryForOrgan(int organId)
+{
+  auto result = this->getOrgans(-1, false);
+  auto organ_it = std::find_if(result.begin(), result.end(), [organId](const auto& o) {
+    return o->getId() == organId;
+  });
+  if(organ_it == result.end())
+  {
+    std::stringstream errMsg;
+    errMsg << "MappedPlant::ComputeGeometryForOrgan: organ not found: " << organId;
+    throw std::runtime_error(errMsg.str().c_str());
+  }
+  auto organ = *organ_it;
+  
+  if(organ->organType() == 4)
+  {
+    // 4 SHOULD mean leaf, so we do not check for successful cast
+    GenerateLeafGeometry(std::dynamic_pointer_cast<Leaf>(organ));
+  }
+  else
+  {
+    GenerateStemGeometry(organ);
+  }
+}
+
+void MappedPlant::ComputeGeometryForOrganType(int organType)
+{
+  auto organ_list = this->getOrgans(organType, false);
+  // First we check if we have enough memory to support the geometry
+  unsigned int point_space = 0;
+  unsigned int cell_space = 0;
+  for(auto organ : organ_list)
+  {
+    // Check against object, because organType can be -1
+    if(organ->organType() == 4)
+    {
+      // 4 SHOULD mean leaf, so we do not check for successful cast
+      point_space += organ->getNumberOfNodes() * 6 * 3;
+      cell_space += organ->getNumberOfNodes() * 6;
+    }
+    else
+    {
+      point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+      cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
+    }
+  }
+  geometry.reserve(point_space);
+  geometryNormals.reserve(point_space);
+  geometryColors.reserve(point_space);
+  geometryIndices.reserve(cell_space);
+  geometryTextureCoordinates.reserve(point_space);
+
+  point_space = 0;
+  cell_space = 0;
+  for(auto organ : organ_list)
+  {
+    if(organType >= 0 && organ->organType() != organType)
+    {
+      continue;
+    }
+    if(organ->organType() == 4)
+    {
+      // 4 SHOULD mean leaf, so we do not check for successful cast
+      GenerateLeafGeometry(std::dynamic_pointer_cast<Leaf>(organ), point_space, cell_space);
+      point_space += organ->getNumberOfNodes() * 6 * 3;
+      cell_space += organ->getNumberOfNodes() * 6;
+    }
+    else
+    {
+      GenerateStemGeometry(organ, point_space, cell_space);
+      point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+      cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
+    }
+  }
+}
+
+void MappedPlant::ComputeGeometry()
+{
+  this->ComputeGeometryForOrganType(-1);
+}
+
+void MappedPlant::MapPropertyToColors(std::string property, std::vector<double> minMax)
+{
+  
+}
+
+void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o, unsigned int c_o)
+{
+  // std::vector::reserve should be idempotent.
+  geometry.reserve(p_o + leaf->getNumberOfNodes() * 2);
+  geometryNormals.reserve(p_o + leaf->getNumberOfNodes() * 2);
+  geometryIndices.reserve(c_o + (leaf->getNumberOfNodes() - 1) * 12);
+  geometryColors.reserve(p_o + leaf->getNumberOfNodes() * 2 );
+  geometryTextureCoordinates.reserve(p_o + leaf->getNumberOfNodes() * 2);
+  geometryNodeIds.reserve(p_o + leaf->getNumberOfNodes() * 2);
+  unsigned int points_index = p_o;
+  unsigned int cell_index = c_o;
+  Quaternion heading = Quaternion::FromMatrix3d(leaf->iHeading);
+  Quaternion rot = Quaternion::geodesicRotation({1,0,0},{0,0,1});
+  Vector3d lastPosition = leaf->getNode(0);
+  // TODO: check if getLength(true) is the correct length
+  double totalLenght = leaf->getLength(true);
+  double currentLength = 0;
+  for(int i = 0; i < leaf->getNumberOfNodes(); ++i)
+  {
+    // we presume that the nodes follow the center line of the plant
+    // and that the leaf is oriented along the x axis
+    auto position = leaf->getNode(i);
+    auto id = leaf->getNodeId(i);
+    Vector3d dist;
+    // This part is for the rotation of the leaf segment
+    if(i + 1 < leaf->getNumberOfNodes())
+    {
+      dist = leaf->getNode(i + 1) - position;
+    }
+    else
+    {
+      dist = leaf->getNode(i - 1) - position;
+    }
+    // This, in contrast, is for the texture mapping
+    currentLength += (position - lastPosition).length() / totalLenght;
+    rot *= Quaternion::geodesicRotation(rot.Forward(), dist);
+    // TODO: Check with mona on what the Vector3d coordinates of
+    // this function are, and if we need to change them
+    auto vis = leaf->getLeafVis(id);
+    // We don't normally split normals, but in this case we have a flat surface
+    // and we want to have a smooth shading
+    geometryTextureCoordinates.insert(geometryTextureCoordinates.begin() + points_index,
+                                            {currentLength, 0.0, currentLength, 1.0});
+    geometryNodeIds.insert(geometryNodeIds.begin() + points_index, {id, id});
+    // TODO: it not obvious that points_index can be changed by the insert here
+    vec2Buf(geometry, points_index, vis[0], vis[1]);
+    points_index = vec2Buf(geometryNormals, points_index, rot.Up(), rot.Up());
+    vec2Buf(geometry, points_index, vis[0], vis[1]);
+    points_index = vec2Buf(geometryNormals, points_index ,-rot.Up(), -rot.Up());
+    // The triangles are defined clockwise for the front face and counter clockwise for the back face
+    if(i > 0)
+    {
+      geometryIndices.insert(geometryIndices.begin() + cell_index, 
+      {points_index-6, points_index-7, points_index-3, points_index-6, points_index-3, points_index-2,
+       points_index-4, points_index-5, points_index-1, points_index-4, points_index-1, points_index-0});
+      cell_index += 12;
+    }
+  }
+}
+
+void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
+{
+  const unsigned int geometry_resolution = 16;
+  
+  geometry.reserve(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3));
+  geometryNormals.reserve(p_o + stem->getNumberOfNodes() * geometry_resolution * 3);
+  geometryIndices.reserve(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 3);
+  geometryColors.reserve(p_o + stem->getNumberOfNodes() * geometry_resolution);
+  geometryTextureCoordinates.reserve(p_o + stem->getNumberOfNodes() * geometry_resolution * 2);
+  geometryNodeIds.reserve(p_o + stem->getNumberOfNodes() * geometry_resolution);
+  Quaternion heading = Quaternion::FromMatrix3d(stem->iHeading);
+  Quaternion lastRotation = Quaternion::geodesicRotation({1,0,0},{0,0,1});
+  for(auto i = 0; i < stem->getNumberOfNodes(); ++i)
+  {
+    double diameter = stem->getParameter("radius");
+    const auto& node = stem->getNode(i);
+    Vector3d dist;
+    if(i + 1 < stem->getNumberOfNodes())
+    {
+      dist = stem->getNode(i + 1) - node;
+    }
+    else
+    {
+      dist = stem->getNode(i - 1) - node;
+    }
+    lastRotation *= Quaternion::geodesicRotation(lastRotation.Forward(), dist);
+    auto deltaphi = 2 * M_PI / geometry_resolution;
+    for (auto j = 0; j < geometry_resolution; ++j)
+    {
+      auto phi = j * deltaphi;
+      Vector3d outer = {0.0, std::cos(phi) * diameter, std::sin(phi) * diameter};
+      outer = lastRotation.Rotate(outer);
+      // consequtive points are stored in the buffer
+      // the plus 0 is not necessary, but it makes it easier to read
+      geometry[3 * (i * geometry_resolution + j) + 0 + p_o] = node.x + outer.x;
+      geometry[3 * (i * geometry_resolution + j) + 1 + p_o] = node.y + outer.y;
+      geometry[3 * (i * geometry_resolution + j) + 2 + p_o] = node.z + outer.z;
+      // the indices are stored in the buffer, and are all front facing
+      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = i * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = (i + 1) * geometry_resolution + j;
+      // the normals are stored in the buffer
+      geometryNormals[3 * (i * geometry_resolution + j) + 0 + p_o] = outer.x;
+      geometryNormals[3 * (i * geometry_resolution + j) + 1 + p_o] = outer.y;
+      geometryNormals[3 * (i * geometry_resolution + j) + 2 + p_o] = outer.z;
+
+      geometryNodeIds[i * geometry_resolution + j + p_o] = stem->getNodeId(i);
+
+      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 0 + p_o] = i / (double)stem->getNumberOfNodes();
+      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + p_o] = phi / (2 * M_PI);
+    }
+  }
 }
 
 } // namespace

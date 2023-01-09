@@ -6,6 +6,8 @@ src/CMakeFiles/
 src/Makefile
 src/cmake_install.cmake
 test/__pycache__/
+*.o
+
 
 # auto-saved files
 *~
@@ -47,7 +49,10 @@ __pycache__
 .pydevproject
 .settings/
 Debug/
+Release/
+build/
 *.vtp
+.vscode/
 
 # Jupyter notebook
 tutorial/jupyter/.ipynb_checkpoints/

@@ -8,6 +8,7 @@
 #include <functional>
 #include <vector>
 #include <tuple>
+#include <string>
 
 namespace CPlantBox {
 
@@ -145,9 +146,81 @@ public:
 	//for photosynthesis and phloem module:	   
 	void calcExchangeZoneCoefs() override;					 
 	std::vector<int> getSegmentIds(int ot = -1) const;//needed in phloem module
-	std::vector<int> getNodeIds(int ot = -1) const;	//needed in phloem module		
+	std::vector<int> getNodeIds(int ot = -1) const;	//needed in phloem module
+
+  /* Geometry Functions for Visual Representation */
+
+  /**
+   * Compute the geometry for a single organ
+   * @param organId the id of the organ
+  */
+  void ComputeGeometryForOrgan(int organId);
+  
+  /**
+   * Compute the geometry for all organs of a given type
+   * This merges the individual organs into one geometry!
+   * @param organType the type of the organ
+  */
+  void ComputeGeometryForOrganType(int organType);
+  /**
+   * Compute the geometry of the whole plant
+   * This merges the individual organs into one geometry!
+   * These methods cannot be const as that would require returning buffers
+   * individually, which would be very inefficient
+  */
+  void ComputeGeometry();
+
+  /**
+   * Map Property onto vertex colors
+   * This will use the complete range of the RBGA color space
+   * You need to communicate the min and max values of the property seperately
+   * @param property the property to map
+   * @param minMax the min and max values of the property
+  */
+  void MapPropertyToColors(std::string property, 
+                           std::vector<double> minMax = std::vector<double>());
+
+
+  /**
+   * A set of methods to retrieve the buffers
+  */
+  std::vector<double> GetGeometry() { return geometry; }
+  std::vector<unsigned short> GetGeometryColors() { return geometryColors; }
+  std::vector<double> GetGeometryNormals() { return geometryNormals; }
+  std::vector<double> GetGeometryTextureCoordinates() { return geometryTextureCoordinates; }
+  std::vector<unsigned int> GetGeometryIndices() { return geometryIndices; }
+
  protected:
-	void initialize_(bool verbose = true, bool stochastic = true, bool LB = true);	
+	void initialize_(bool verbose = true, bool stochastic = true, bool LB = true);
+  
+  /**
+   * A private method to generate a geometry for the leaf
+   * Based on the existing parametrization and the template from the parameter file
+   * @param leaf the leaf to generate the geometry for
+   * @param p_o the point offset (mainly internal)
+   * @param c_o the cell offset (mainly internal)
+   * @note using a shared_ptr as parameter might be less efficient, but only O(1) 
+  */
+  void GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
+
+  /**
+   * A private method to generate a geometry for the stem
+   * Based solely on the node-link structure
+   * @param stem the stem to generate the geometry for
+   * @param p_o the point offset (mainly internal)
+   * @param c_o the cell offset (mainly internal)
+  */
+  void GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o = 0, unsigned int c_o = 0);
+  
+
+  /* Geometry buffers */
+  std::vector<double> geometry; // x,y,z coordinates
+  std::vector<unsigned short> geometryColors; // r,g,b,a
+  std::vector<double> geometryNormals; // x,y,z coordinates
+  std::vector<unsigned int> geometryIndices; // indices for triangles
+  std::vector<double> geometryTextureCoordinates; // u,v coordinates
+  std::vector<int> geometryNodeIds; // the node ids for each vertex
+  unsigned int geometry_resolution = 16; // the resolution of the cylindric geometry
 };
 
 }

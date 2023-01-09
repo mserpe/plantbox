@@ -396,8 +396,6 @@ double Leaf::leafAreaAtSeg(int localSegId, bool realized, bool withPetiole)
  */
 double Leaf::leafLengthAtSeg(int localSegId, bool withPetiole)
 {
-	
-	
 	double length_out = 0.;
 	if (!(param()->laterals)) {
 		auto n1 = nodes.at(localSegId);
@@ -626,11 +624,6 @@ std::vector<Vector3d> Leaf::getLeafVis(int i)
 	} else { // no need for polygonal visualisation
 		return std::vector<Vector3d>();
 	}
-}
-
-std::vector<double> Leaf::get3DShape() const
-{
-  return Organ::get3DShape();
 }
 
 /**

@@ -88,8 +88,7 @@ public:
 	double dxMin() const; ///< returns the min axial resolution
 	virtual void rel2abs(){ throw std::runtime_error( "rel2abs() not implemented" );  }///should be overwritten
     virtual void abs2rel(){ throw std::runtime_error( "abs2rel() not implemented" );  }///should be overwritten
-	virtual std::vector<double> get3DShape() const; //to be overwritten for leaf organs?
-    
+
 	void moveOrigin(int idx);//change idx of first node, in case of nodal growth
 
     /* last time step */

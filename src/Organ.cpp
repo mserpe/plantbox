@@ -194,6 +194,7 @@ void Organ::addNode(Vector3d n, int id, double t, size_t index, bool shift)
 	}
 }
 
+
 /**
  * change idx of node linking to parent organ (in case of internodal growth)
  * @see Organ::addNode
@@ -509,16 +510,4 @@ double Organ::orgVolume(double length_,  bool realized) const
 	return M_PI * length_ * param_->a * param_->a;//cylinder
 };
 
-
-
-/**
- * get 3D surface of the organ
- * to fill with actual function
- * @return vector with x, y, z coodinates defining the organ's surface
- */
-std::vector<double> Organ::get3DShape() const
-{
-	std::vector<double> surface;
-	return surface;
-};
-}
+}; // end namespace CPlantBox

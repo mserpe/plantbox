@@ -2,6 +2,7 @@
 #include "external/pybind11/include/pybind11/pybind11.h"
 #include "external/pybind11/include/pybind11/stl.h"
 #include <pybind11/functional.h>
+#include <pybind11/operators.h>
 namespace py = pybind11;
 
 /**
@@ -156,6 +157,41 @@ PYBIND11_MODULE(plantbox, m) {
             { sizeof(double) }                       /* Strides (in bytes) for each index */
         );
     });
+
+    py::class_<Quaternion>(m, "Quaternion", py::buffer_protocol())
+      .def(py::init<>())
+      .def(py::init<double, double, double, double>())
+      .def(py::init<const Quaternion&>())
+      .def(py::init<double, const Vector3d&>())
+      .def("__add__", [](const Quaternion& q1, const Quaternion& q2) { return q1 + q2; }, py::is_operator())
+      .def("__sub__", [](const Quaternion& q1, const Quaternion& q2) { return q1 - q2; }, py::is_operator())
+      .def("__mul__", [](const Quaternion& q1, const Quaternion& q2) { return q1 * q2; }, py::is_operator())
+      .def("__mul__", [](const Quaternion& q1, double d) { return q1 * d; }, py::is_operator())
+      .def("__mul__", [](double d, const Quaternion& q1) { return q1 * d; }, py::is_operator())
+      .def("__truediv__", [](const Quaternion& q1, double d) { return q1 / d; }, py::is_operator())
+      .def("norm", &Quaternion::norm)
+      .def("normalize", &Quaternion::normalize)
+      .def("inverse", &Quaternion::inverse)
+      .def("Forward", &Quaternion::Forward)
+      .def("Up", &Quaternion::Up)
+      .def("Right", &Quaternion::Right)
+      .def("Rotate", (Vector3d (Quaternion::*)(const Vector3d&) const) &Quaternion::Rotate)
+      .def_static("LookAt", &Quaternion::LookAt)
+      .def_static("SphericalInterpolation", &Quaternion::SphericalInterpolation)
+      .def_static("geodesicRotation", &Quaternion::geodesicRotation)
+      .def_buffer([](Quaternion &q) -> py::buffer_info { /* enables numpy conversion with np.array(quaternion_instance, copy = False) */
+        // this only really works if the variables are stored in a contiguous block of memory
+        return py::buffer_info(
+            &q.w,   
+            sizeof(double),    
+            py::format_descriptor<double>::format(),
+            1,                
+            { 4 },          
+            { sizeof(double) }   
+        );
+      })
+    ;
+
     py::class_<Matrix3d>(m, "Matrix3d", py::buffer_protocol())
             .def(py::init<>())
             .def(py::init<double, double, double, double, double, double, double, double, double>())
@@ -270,7 +306,6 @@ PYBIND11_MODULE(plantbox, m) {
             .def("addChild",&Organ::addChild)
             .def("getNumberOfChildren",&Organ::getNumberOfChildren)
             .def("getChild",&Organ::getChild)
-            .def("get3DShape",&Organ::get3DShape)
 
             .def("getId",&Organ::getId)
             .def("getParam",&Organ::getParam)
@@ -305,7 +340,8 @@ PYBIND11_MODULE(plantbox, m) {
             .def("orgVolume",&Organ::orgVolume, py::arg("length_")=-1, py::arg("realized")=false)
 			.def("orgVolume2Length",&Organ::orgVolume2Length)
             .def_readwrite("iHeading", &Organ::iHeading)
-            .def_readwrite("parentNI", &Organ::parentNI);
+            .def_readwrite("parentNI", &Organ::parentNI)
+      ;
 
     /*
      * Organism.h
@@ -916,7 +952,16 @@ PYBIND11_MODULE(plantbox, m) {
 			.def("getSegmentIds",&MappedPlant::getSegmentIds)
 			.def_readwrite("leafBladeSurface",  &MappedPlant::leafBladeSurface)
 			.def_readwrite("bladeLength",  &MappedPlant::bladeLength)
-			.def("getNodeIds",&MappedPlant::getNodeIds);
+			.def("getNodeIds",&MappedPlant::getNodeIds)
+      .def("ComputeGeometryForOrgan",&MappedPlant::ComputeGeometryForOrgan, py::arg("organId"))
+      .def("ComputeGeometryForOrganType",&MappedPlant::ComputeGeometryForOrganType)
+      .def("ComputeGeometry",&MappedPlant::ComputeGeometry)
+      .def("GetGeometry",&MappedPlant::GetGeometry)
+      .def("GetGeometryColors",&MappedPlant::GetGeometryColors)
+      .def("GetGeometryNormals",&MappedPlant::GetGeometryNormals)
+      .def("GetGeometryIndices",&MappedPlant::GetGeometryIndices)
+      .def("GetGeometryTextureCoordinates",&MappedPlant::GetGeometryTextureCoordinates)
+  ;
 			
 	/*
      * Photosynthesis.h

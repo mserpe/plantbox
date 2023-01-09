@@ -3,6 +3,7 @@ from vtk_tools import *
 
 import time
 import numpy as np
+import numpy2vtk as n2v
 import vtk
 
 """
@@ -29,7 +30,6 @@ def plot_leaf(leaf):
     actor.SetMapper(mapper);
     actor.GetProperty().SetColor(colors.GetColor3d("Green"))
     render_window([actor], "plot_plant", [], [-10, 10, -10, 10, -10, 10]).Start()
-
 
 def plot_plant(plant, p_name, render = True):
     """
@@ -63,7 +63,6 @@ def plot_plant(plant, p_name, render = True):
         render_window([tube_plot_actor, actor], "plot_plant", color_bar, tube_plot_actor.GetBounds()).Start()
     return [tube_plot_actor, actor], color_bar
 
-
 def create_leaf(leaf, leaf_points, leaf_polys):
     offs = leaf_points.GetNumberOfPoints()
 
@@ -75,12 +74,6 @@ def create_leaf(leaf, leaf_points, leaf_polys):
         if len(ln1) > 0 or len(ln2) > 0:
             n1 = leaf.getNode(i)
             n2 = leaf.getNode(i + 1)
-
-#             if len(ln1) > 0 and len(ln2) == 0:
-#                 print(" 2 -> 0")
-#             if len(ln1) == 0 and len(ln2) > 0:
-#                 print(" 0 -> 2")
-
             if len(ln1) == 2 and len(ln2) == 2:  # normal case
                 offs = add_quad_(n1, ln1[0], ln2[0], n2, leaf_points, leaf_polys, offs)
                 offs = add_quad_(n1, ln1[1], ln2[1], n2, leaf_points, leaf_polys, offs)
@@ -106,6 +99,9 @@ def create_leaf(leaf, leaf_points, leaf_polys):
                     offs = add_quad_(ln1[1], ln1[2], ln2[0], ln2[0], leaf_points, leaf_polys, offs)
                     offs = add_quad_(ln1[4], ln1[5], ln2[1], ln2[1], leaf_points, leaf_polys, offs)
 
+def write_plant_to_file(plant, p_name, include_leafs = False) :
+  print("Using ", p_name, " as output file")
+  
 
 def add_quad_(a, b, c, d, leaf_points, leaf_polys, offs):
     q = vtk.vtkPolygon()
@@ -644,6 +640,18 @@ def plot_roots_and_soil_files(filename: str, pname:str):
     meshActors.extend([rootActor])
     render_window(meshActors, filename, meshCBar, soil_grid.GetBounds()).Start()
 
+def convert_vis_to_vtk(mapped_plant : pb.MappedPlant) :
+  """ converts a plant to vtk format for visualization, using the new vis methods """
+  pd = vtk.vtkPolyData()
+  points = vtk.vtkPoints()
+  mapped_plant.computeGeometry()
+  points.SetData(vtk_data(mapped_plant.getGeometry()))
+  cell_data = mapped_plant.getGeometryIndices()
+  cell_data = np.reshape(cell_data, (cell_data.shape[0]/3, 3))
+  cells = n2v.cells(cell_data)
+  pd.SetPoints(points)
+  pd.SetPolys(cells)
+  return pd
 
 class AnimateRoots:
     """ class to make an interactive animation """

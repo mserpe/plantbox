@@ -3,7 +3,7 @@ from vtk_tools import *
 
 import time
 import numpy as np
-import numpy2vtk as n2v
+from vtk.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 import vtk
 
 """
@@ -648,7 +648,7 @@ def convert_vis_to_vtk(mapped_plant : pb.MappedPlant) :
   points.SetData(vtk_data(mapped_plant.getGeometry()))
   cell_data = mapped_plant.getGeometryIndices()
   cell_data = np.reshape(cell_data, (cell_data.shape[0]/3, 3))
-  cells = n2v.cells(cell_data)
+  cells = numpy_to_vtk(cell_data)
   pd.SetPoints(points)
   pd.SetPolys(cells)
   return pd

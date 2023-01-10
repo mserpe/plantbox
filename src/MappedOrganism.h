@@ -197,11 +197,12 @@ public:
    * A private method to generate a geometry for the leaf
    * Based on the existing parametrization and the template from the parameter file
    * @param leaf the leaf to generate the geometry for
+   * @param petiole_zone the zone of the petiole in which no leaf surface is present
    * @param p_o the point offset (mainly internal)
    * @param c_o the cell offset (mainly internal)
    * @note using a shared_ptr as parameter might be less efficient, but only O(1) 
   */
-  void GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
+  void GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int petiole_zone = 0, unsigned int p_o = 0, unsigned int c_o = 0);
 
   /**
    * A private method to generate a geometry for the stem
@@ -220,7 +221,7 @@ public:
   std::vector<unsigned int> geometryIndices; // indices for triangles
   std::vector<double> geometryTextureCoordinates; // u,v coordinates
   std::vector<int> geometryNodeIds; // the node ids for each vertex
-  unsigned int geometry_resolution = 16; // the resolution of the cylindric geometry
+  unsigned int geometry_resolution = 8; // the resolution of the cylindric geometry
 };
 
 }

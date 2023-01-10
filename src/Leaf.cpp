@@ -251,7 +251,6 @@ double Leaf::getParameter(std::string name) const {
 	return Organ::getParameter(name);
 }
 
-
 /**
  * in case there are no lateral leafs return leaf surface area [cm2]
  * upper side only. If used for photosynthesis, 
@@ -261,7 +260,7 @@ double Leaf::getParameter(std::string name) const {
  * @return 	total leaf blade Area  (withPetiole == false) or total leaf Area (withPetiole == true) [cm2] 
  */
 double Leaf::leafArea(bool realized, bool withPetiole) const
-{																			 
+{
 	double length_ = getLength(realized);
 	double surface_ = 0;
 	double surfacePetiole = 0;

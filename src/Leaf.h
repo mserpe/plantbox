@@ -45,6 +45,8 @@ public:
     double leafAreaAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
     double leafVolAtSeg(int localSegId, bool realized = false, bool withPetiole = false); //leaf area at a specific segment
     double leafLengthAtSeg(int localSegId, bool withPetiole = false);
+    // I moved this to public because I need it.
+    bool nodeLeafVis(double l); ///<  leaf base (false), branched leaf (false), or leaf surface area (true)
     double getLength(int i) const override;
     double getLength(bool realized = true) const; ///< length of the organ (realized => dependent on dx() and dxMin())
     std::vector<double> getLeafVisX(int i);
@@ -86,8 +88,7 @@ protected:
     Vector3d getIncrement(const Vector3d& p, double sdx, int n= -1); ///< called by createSegments, to determine growth direction
 	void createSegments(double l, bool silence); ///< creates segments of length l, called by leaf::simulate()
 
-    bool nodeLeafVis(double l); ///<  leaf base (false), branched leaf (false), or leaf surface area (true)
-	std::vector<double> getLeafVisX_(double l);
+    std::vector<double> getLeafVisX_(double l);
 	bool ageDependentTropism = false;///< do we need to check the leaf's age to see when to update the tropism effect?, @see Leaf::rel2abs
     bool firstCall = true;
 };

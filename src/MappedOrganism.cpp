@@ -147,7 +147,7 @@ void MappedSegments::setRectangularGrid(Vector3d min, Vector3d max, Vector3d res
 	maxBound = max;
 	resolution = res;
 	cutAtGrid = cut;
-	// std::cout << "setRectangularGrid: cutSegments \n" << std::flush;
+	// //std::cout << "setRectangularGrid: cutSegments \n" << std::flush;
 	if (cutAtGrid) {
 		cutSegments(); // re-add (for cutting)
 	}
@@ -466,7 +466,7 @@ Vector3d MappedSegments::getMinBounds() {
  * @param LB		 		implement length-based waiting time before growth (true) of laterals or delay-based (false)? (default = true)
  */
 void MappedRootSystem::initialize_(int basaltype, int shootbornetype, bool verbose, bool LB) {
-	std::cout << "MappedRootSystem::initialize \n" << std::flush;
+	//std::cout << "MappedRootSystem::initialize \n" << std::flush;
 	if(LB){
 		RootSystem::initializeLB( basaltype, shootbornetype, verbose);
 	}else{RootSystem::initializeDB( basaltype, shootbornetype, verbose);}
@@ -508,7 +508,7 @@ void MappedRootSystem::simulate(double dt, bool verbose)
 		c++;
 	}
 	if (verbose) {
-		std::cout << "nodes moved "<< uni.size() << "\n" << std::flush;
+		//std::cout << "nodes moved "<< uni.size() << "\n" << std::flush;
 	}
 	auto newnodes = this->getNewNodes(); // add nodes
 	nodes.reserve(nodes.size()+newnodes.size());
@@ -521,7 +521,7 @@ void MappedRootSystem::simulate(double dt, bool verbose)
 		nodeCTs.push_back(nct);
 	}
 	if (verbose) {
-		std::cout << "new nodes added " << newnodes.size() << "\n" << std::flush;
+		//std::cout << "new nodes added " << newnodes.size() << "\n" << std::flush;
 	}
 	auto newsegs = this->getNewSegments(); // add segments (TODO cutting)
 	segments.resize(segments.size()+newsegs.size());
@@ -529,7 +529,7 @@ void MappedRootSystem::simulate(double dt, bool verbose)
 		segments[ns.y-1] = ns;
 	}
 	if (verbose) {
-		std::cout << "segments added "<< newsegs.size() << "\n" << std::flush;
+		//std::cout << "segments added "<< newsegs.size() << "\n" << std::flush;
 	}
 	auto newsegO = this->getNewSegmentOrigins(); // to add radius and type (TODO cutting)
 	radii.resize(radii.size()+newsegO.size());
@@ -537,7 +537,7 @@ void MappedRootSystem::simulate(double dt, bool verbose)
 	organTypes.resize(organTypes.size()+newsegO.size());
 	c = 0;
 	if (verbose) {
-		std::cout << "Number of segments " << radii.size() << ", including " << newsegO.size() << " new \n"<< std::flush;
+		//std::cout << "Number of segments " << radii.size() << ", including " << newsegO.size() << " new \n"<< std::flush;
 	}
 	for (auto& so : newsegO) {
 		int segIdx = newsegs[c].y-1;
@@ -587,7 +587,7 @@ void MappedRootSystem::simulate(double dt, bool verbose)
 void MappedPlant::initialize_(bool verbose, bool stochastic, bool LB)
 {
   reset(); // just in case
-	std::cout << "MappedPlant::initialize \n" << std::flush;
+	//std::cout << "MappedPlant::initialize \n" << std::flush;
 	this->stochastic = stochastic;
 	if(LB){	Plant::initializeLB(verbose);
 	}else{Plant::initializeDB(verbose);}
@@ -915,40 +915,35 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 			{
 				// 4 SHOULD mean leaf, so we do not check for successful cast
 				point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-				cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
-				auto leaf = std::dynamic_pointer_cast<Leaf>(organ);
-				int petiole_zone = 0;
-				for(int i = 0; i < leaf->getNumberOfNodes(); i++)
-				{
-					if(leaf->nodeLeafVis(leaf->getLength(i)))
-					{
-						petiole_zone = i;
-						break;
-					}
-				}
-				point_space += (organ->getNumberOfNodes() - petiole_zone) * 4 * 3;
-				cell_space += ((organ->getNumberOfNodes() - petiole_zone) - 1) * 12;
+				cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
+				point_space += (organ->getNumberOfNodes()) * 4 * 3;
+				cell_space += ((organ->getNumberOfNodes()) - 1) * 4 * 3 + 40;
 			}
 			else
 			{
 				point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-				cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
+				cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
 			}
 		}
   }
+  //std::cout << "Going to allocate " << point_space << " points and " << cell_space << " cells" << std::endl;
   geometry.reserve(point_space);
   geometryNormals.reserve(point_space);
-  geometryColors.reserve(point_space);
+  geometryColors.reserve(point_space / 3 * 2);
   geometryIndices.reserve(cell_space);
   geometryTextureCoordinates.reserve(point_space);
+  geometryNodeIds.reserve(point_space / 3 + 1);
 
 
   point_space = 0;
   cell_space = 0;
+  unsigned int checked_organs = 0;
   for(auto organ : organ_list)
   {
+    checked_organs++;
 		//std::cout << "Going through organ " << organ->getId() << std::endl;
-    if(organType >= 0 && organ->organType() != organType)
+
+    if((organType >= 0 && organ->organType() != organType) || organ->getNumberOfNodes() <= 1)
     {
       continue;
     }
@@ -956,36 +951,55 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
     {
 			auto leaf = std::dynamic_pointer_cast<Leaf>(organ);
 			// render petiole
+      //std::cout << "Generating geometry for leaf " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
+      //std::cout << "Stem part for petiole and rest" << std::endl;
       GenerateStemGeometry(organ, point_space, cell_space);
-      point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-      cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
+      //std::cout << "Updating buffer positions because the leaf is a two-parter" << std::endl;
+      //point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+      //cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
+      point_space = geometry.size();
+      cell_space = geometryIndices.size();
+
       // 4 SHOULD mean leaf, so we do not check for successful cast
 			int petiole_zone = 0;
+      //std::cout << "Calculating petiole zone" << std::endl;
 			for(int i = 0; i < leaf->getNumberOfNodes(); i++)
 			{
-				if(leaf->nodeLeafVis(leaf->getLength(i)))
+				if(!leaf->nodeLeafVis(leaf->getLength(i)))
 				{
 					petiole_zone = i;
-					break;
 				}
+        else break;
 			}
+      //std::cout << "Petiole zone is " << petiole_zone << std::endl;
 			if(petiole_zone + 1 < leaf->getNumberOfNodes())
 			{
+        //std::cout << "Generating geometry for leaf " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
 				GenerateLeafGeometry(leaf, petiole_zone, point_space, cell_space);
-				point_space += (organ->getNumberOfNodes() - petiole_zone) * 6 * 3;
-				cell_space += (organ->getNumberOfNodes() - petiole_zone) * 6;
+				//point_space += (organ->getNumberOfNodes() - petiole_zone) * 6 * 3;
+				//cell_space += (organ->getNumberOfNodes() - petiole_zone) * 6;
+        point_space = geometry.size();
+        cell_space = geometryIndices.size();
+        //std::cout << "Leaf geometry done" << std::endl;
 			}
     }
     else
     {
 			//std::cout << "Organ is a stem" << std::endl;
+      //std::cout << "Generating geometry for stem " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
+      auto prev_size = geometryIndices.size();
       GenerateStemGeometry(organ, point_space, cell_space);
-      point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-      cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
+      //std::cout << "Organ " << organ->getId() << " pushed the size from " << prev_size << " to " << geometryIndices.size() << std::endl;
+      //point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+      //cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
+      point_space = geometry.size();
+      cell_space = geometryIndices.size();
     }
-    assert(geometry.size() % 3 == 0);
-		assert(geometryIndices.size() % 3 == 0);
+    //std::cout << "Done generating geometry for organ " << organ->getId() << std::endl;
+
   }
+  assert(geometry.size() % 3 == 0);
+  assert(geometryIndices.size() % 3 == 0);
 }
 
 void MappedPlant::ComputeGeometry()
@@ -1001,15 +1015,17 @@ void MappedPlant::MapPropertyToColors(std::string property, std::vector<double> 
 void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int petiole_zone, unsigned int p_o, unsigned int c_o)
 {
   // std::vector::reserve should be idempotent.
+  //std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
 	int first_surface_id = petiole_zone + 1;
 	int total_points = leaf->getNumberOfNodes() - petiole_zone;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometry.size()));
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryNormals.size()));
-	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 4 * 3), geometryIndices.size()));
+	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 6), geometryIndices.size()));
 	geometryColors.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryColors.size()));
 	geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 2), geometryTextureCoordinates.size()));
 	geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4), geometryNodeIds.size()));
 
+  //std::cout << "Orientation generation" << std::endl;
   unsigned int points_index = p_o;
   unsigned int cell_index = c_o;
   Quaternion heading = Quaternion::FromMatrix3d(leaf->iHeading);
@@ -1021,6 +1037,7 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
   for(int i = first_surface_id; i < leaf->getNumberOfNodes(); ++i)
   {
     // we presume that the nodes follow the center line of the plant
+    //std::cout << " going through node id " << i << " on this leaf." << std::endl;
     // and that the leaf is oriented along the x axis
     auto position = leaf->getNode(i);
     auto id = leaf->getNodeId(i);
@@ -1042,32 +1059,44 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
     auto vis = leaf->getLeafVis(i);
     // We don't normally split normals, but in this case we have a flat surface
     // and we want to have a smooth shading
+    //std::cout << "Inserting some geometry" << std::endl;
+    //std::cout << "Vis has length " << vis.size() << std::endl;
     geometryTextureCoordinates.insert(geometryTextureCoordinates.begin() + points_index,
                                             {currentLength, 0.0, currentLength, 1.0});
-		geometryNodeIds.insert(geometryNodeIds.begin() + points_index, {id, id});
+    //std::cout << "geometryNodeIds[" << points_index << "] = " << id << std::endl;
+    //std::cout << "Vector Data: Size=" << geometryNodeIds.size() << ", capacity=" << geometryNodeIds.capacity() << std::endl;
+    geometryNodeIds[points_index] = id;
+    geometryNodeIds[points_index + 1] = id;
     // TODO: it not obvious that points_index can be changed by the insert here
     vec2Buf(geometry, points_index, vis[0], vis[1]);
     points_index = vec2Buf(geometryNormals, points_index, rot.Up(), rot.Up());
+    geometryNodeIds[points_index] = id;
+    geometryNodeIds[points_index + 1] = id;
     vec2Buf(geometry, points_index, vis[0], vis[1]);
     points_index = vec2Buf(geometryNormals, points_index ,-rot.Up(), -rot.Up());
     // The triangles are defined clockwise for the front face and counter clockwise for the back face
-    if(i > 0)
+    if(i > first_surface_id)
     {
+      //std::cout << "Inserting some indices: " << geometryIndices.size() << " + 6 < " << geometryIndices.capacity() << std::endl;
       geometryIndices.insert(geometryIndices.begin() + cell_index, 
       {points_index-6, points_index-7, points_index-3, points_index-6, points_index-3, points_index-2,
        points_index-4, points_index-5, points_index-1, points_index-4, points_index-1, points_index-0});
       cell_index += 12;
+      //std::cout << "Inserted" << std::endl;
     }
   }
+      //std::cout << "Done" << std::endl;
 }
 
 
 void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
 {
-  const unsigned int geometry_resolution = 16;
+  //std::cout << "Generating Stem for " << stem->getId() << " and reserving buffers" << std::endl;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()));
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()));
-	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 3), geometryIndices.size()));
+  //std::cout << "Wanting to resize " << geometryIndices.size() << "/" << geometryIndices.capacity() << " indices to " << static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 6) << std::endl;
+  //std::cout << "c_o=" << c_o << ", stem->getNumberOfNodes()=" << stem->getNumberOfNodes() << ", geometry_resolution=" << geometry_resolution << ", total is " << (stem->getNumberOfNodes() -1) * geometry_resolution * 6 << std::endl;
+  geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 6), geometryIndices.size()));
   geometryColors.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution), geometryColors.size()));
   geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution * 2), geometryTextureCoordinates.size()));
   geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution), geometryNodeIds.size()));
@@ -1099,12 +1128,12 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       geometry[3 * (i * geometry_resolution + j) + 1 + p_o] = node.y + outer.y;
       geometry[3 * (i * geometry_resolution + j) + 2 + p_o] = node.z + outer.z;
       // the indices are stored in the buffer, and are all front facing
-      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = i * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = (i + 1) * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = p_o + i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = p_o + i * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = p_o + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = p_o + i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = p_o + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = p_o + (i + 1) * geometry_resolution + j;
       // the normals are stored in the buffer
       geometryNormals[3 * (i * geometry_resolution + j) + 0 + p_o] = outer.x;
       geometryNormals[3 * (i * geometry_resolution + j) + 1 + p_o] = outer.y;

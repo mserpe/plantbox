@@ -33,7 +33,7 @@ namespace py = pybind11;
 #include "XylemFlux.h"
 #include "ExudationModel.h"
 #include "Photosynthesis.h"
-#include "PiafMunch/runPM.h"
+//#include "PiafMunch/runPM.h"
 
 #include "sdf_rs.h" // todo to revise ...
 
@@ -961,6 +961,7 @@ PYBIND11_MODULE(plantbox, m) {
       .def("GetGeometryNormals",&MappedPlant::GetGeometryNormals)
       .def("GetGeometryIndices",&MappedPlant::GetGeometryIndices)
       .def("GetGeometryTextureCoordinates",&MappedPlant::GetGeometryTextureCoordinates)
+      .def("GetGeometryNodeIds", &MappedPlant::GetGeometryNodeIds)
   ;
 			
 	/*
@@ -1017,6 +1018,8 @@ PYBIND11_MODULE(plantbox, m) {
 	/*
      * runPM.h
      */
+
+#if 0
     py::class_<PhloemFlux, Photosynthesis, std::shared_ptr<PhloemFlux>>(m, "PhloemFlux")
             .def(py::init<std::shared_ptr<CPlantBox::MappedPlant>, double, double>(),  py::arg("plant_"),  
 			py::arg("psiXylInit"),  py::arg("ciInit") )
@@ -1085,6 +1088,7 @@ PYBIND11_MODULE(plantbox, m) {
 			.def_readwrite("Fpsi",&PhloemFlux::Fpsi)
 			.def_readwrite("Q10",&PhloemFlux::Q10)
 			.def_readwrite("TrefQ10",&PhloemFlux::TrefQ10);
+#endif
 
     py::enum_<Plant::TropismTypes>(m, "TropismType")
             .value("plagio", Plant::TropismTypes::tt_plagio)

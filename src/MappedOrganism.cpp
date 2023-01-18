@@ -1005,6 +1005,14 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 void MappedPlant::ComputeGeometry()
 {
   this->ComputeGeometryForOrganType(-1);
+	std::cout << "Sanity Check for C++ " << std::endl;
+	std::cout << "Geometry size: " << geometry.size() << std::endl;
+	std::cout << "Geometry Indices size: " << geometryIndices.size() << std::endl;
+	std::cout << "Geometry Normals size: " << geometryNormals.size() << std::endl;
+	std::cout << "Geometry Colors size: " << geometryColors.size() << std::endl;
+	std::cout << "Geometry Texture Coordinates size: " << geometryTextureCoordinates.size() << std::endl;
+	std::cout << "Geometry Node Ids size: " << geometryNodeIds.size() << std::endl;
+	std::cout << "This would mean we have " << geometry.size() / 3 << " points and " << geometryIndices.size() / 3 << " cells." << std::endl;
 }
 
 void MappedPlant::MapPropertyToColors(std::string property, std::vector<double> minMax)
@@ -1018,18 +1026,18 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
   //std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
 	int first_surface_id = petiole_zone + 1;
 	int total_points = leaf->getNumberOfNodes() - petiole_zone;
-	geometry.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometry.size()));
-	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryNormals.size()));
-	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 6), geometryIndices.size()));
-	geometryColors.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryColors.size()));
-	geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 2), geometryTextureCoordinates.size()));
-	geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4), geometryNodeIds.size()));
+	geometry.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometry.size()), -1.0);
+	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryNormals.size()), -1.0);
+	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 6), geometryIndices.size()), static_cast<unsigned int>(-1));
+	geometryColors.resize(std::max(static_cast<std::size_t>((p_o/3) + total_points * 4 * 3), geometryColors.size()), static_cast<unsigned short>(-1));
+	geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + total_points * 4 * 2), geometryTextureCoordinates.size()), -1.0);
+	geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o/3 + total_points * 4), geometryNodeIds.size()), -1);
 
   //std::cout << "Orientation generation" << std::endl;
   unsigned int points_index = p_o;
   unsigned int cell_index = c_o;
   Quaternion heading = Quaternion::FromMatrix3d(leaf->iHeading);
-  Quaternion rot = Quaternion::geodesicRotation({1,0,0},{0,0,1});
+  Quaternion rot = Quaternion::geodesicRotation({1,0,0},{0,0,1}).normalized();
   Vector3d lastPosition = leaf->getNode(first_surface_id);
   // TODO: check if getLength(true) is the correct length
   double totalLenght = leaf->getLength(true);
@@ -1054,6 +1062,7 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
     // This, in contrast, is for the texture mapping
     currentLength += (position - lastPosition).length() / totalLenght;
     rot *= Quaternion::geodesicRotation(rot.Forward(), dist);
+		//std::cout << "[Leaf] Rotating " << rot.toString() << " to get " << dist.toString() << std::endl;
     // TODO: Check with mona on what the Vector3d coordinates of
     // this function are, and if we need to change them
     auto vis = leaf->getLeafVis(i);
@@ -1061,7 +1070,7 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
     // and we want to have a smooth shading
     //std::cout << "Inserting some geometry" << std::endl;
     //std::cout << "Vis has length " << vis.size() << std::endl;
-    geometryTextureCoordinates.insert(geometryTextureCoordinates.begin() + points_index,
+    geometryTextureCoordinates.insert(geometryTextureCoordinates.begin() + (points_index/3*2),
                                             {currentLength, 0.0, currentLength, 1.0});
     //std::cout << "geometryNodeIds[" << points_index << "] = " << id << std::endl;
     //std::cout << "Vector Data: Size=" << geometryNodeIds.size() << ", capacity=" << geometryNodeIds.capacity() << std::endl;
@@ -1070,17 +1079,21 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
     // TODO: it not obvious that points_index can be changed by the insert here
     vec2Buf(geometry, points_index, vis[0], vis[1]);
     points_index = vec2Buf(geometryNormals, points_index, rot.Up(), rot.Up());
-    geometryNodeIds[points_index] = id;
-    geometryNodeIds[points_index + 1] = id;
+    geometryNodeIds[points_index/3] = id;
+    geometryNodeIds[(points_index/3) + 1] = id;
     vec2Buf(geometry, points_index, vis[0], vis[1]);
     points_index = vec2Buf(geometryNormals, points_index ,-rot.Up(), -rot.Up());
     // The triangles are defined clockwise for the front face and counter clockwise for the back face
+		
+		unsigned int point_index_offset = points_index / 3;
     if(i > first_surface_id)
     {
       //std::cout << "Inserting some indices: " << geometryIndices.size() << " + 6 < " << geometryIndices.capacity() << std::endl;
       geometryIndices.insert(geometryIndices.begin() + cell_index, 
-      {points_index-6, points_index-7, points_index-3, points_index-6, points_index-3, points_index-2,
-       points_index-4, points_index-5, points_index-1, points_index-4, points_index-1, points_index-0});
+      {point_index_offset-6, point_index_offset-7, point_index_offset-3,
+			point_index_offset-6, point_index_offset-3, point_index_offset-2,
+       point_index_offset-4, point_index_offset-5, point_index_offset-1,
+			 point_index_offset-4, point_index_offset-1, point_index_offset-0});
       cell_index += 12;
       //std::cout << "Inserted" << std::endl;
     }
@@ -1092,14 +1105,14 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
 void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
 {
   //std::cout << "Generating Stem for " << stem->getId() << " and reserving buffers" << std::endl;
-	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()));
-	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()));
+	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()),-1.0);
+	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()),-1.0);
   //std::cout << "Wanting to resize " << geometryIndices.size() << "/" << geometryIndices.capacity() << " indices to " << static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 6) << std::endl;
   //std::cout << "c_o=" << c_o << ", stem->getNumberOfNodes()=" << stem->getNumberOfNodes() << ", geometry_resolution=" << geometry_resolution << ", total is " << (stem->getNumberOfNodes() -1) * geometry_resolution * 6 << std::endl;
-  geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 6), geometryIndices.size()));
-  geometryColors.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution), geometryColors.size()));
-  geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution * 2), geometryTextureCoordinates.size()));
-  geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution), geometryNodeIds.size()));
+  geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (stem->getNumberOfNodes() -1) * geometry_resolution * 6), geometryIndices.size()),static_cast<unsigned int>(-1));
+  geometryColors.resize(std::max(static_cast<std::size_t>(p_o + stem->getNumberOfNodes() * geometry_resolution), geometryColors.size()),static_cast<unsigned short>(-1));
+  geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + stem->getNumberOfNodes() * geometry_resolution * 2), geometryTextureCoordinates.size()),-1.0);
+  geometryNodeIds.resize(std::max(static_cast<std::size_t>((p_o/3) + stem->getNumberOfNodes() * geometry_resolution), geometryNodeIds.size()),-1);
   Quaternion heading = Quaternion::FromMatrix3d(stem->iHeading);
   Quaternion lastRotation = Quaternion::geodesicRotation({1,0,0},{0,0,1});
   for(auto i = 0; i < stem->getNumberOfNodes(); ++i)
@@ -1117,32 +1130,35 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
     }
     lastRotation *= Quaternion::geodesicRotation(lastRotation.Forward(), dist);
     auto deltaphi = 2 * M_PI / geometry_resolution;
+		unsigned int point_index_offset = p_o / 3;
     for (auto j = 0; j < geometry_resolution; ++j)
     {
       auto phi = j * deltaphi;
       Vector3d outer = {0.0, std::cos(phi) * diameter, std::sin(phi) * diameter};
       outer = lastRotation.Rotate(outer);
+			//std::cout << "[Leaf] Rotating " << lastRotation.toString() << " to get " << outer.toString() << std::endl;
       // consequtive points are stored in the buffer
       // the plus 0 is not necessary, but it makes it easier to read
       geometry[3 * (i * geometry_resolution + j) + 0 + p_o] = node.x + outer.x;
       geometry[3 * (i * geometry_resolution + j) + 1 + p_o] = node.y + outer.y;
       geometry[3 * (i * geometry_resolution + j) + 2 + p_o] = node.z + outer.z;
+			// calculating the point index offset from the buffer offset
       // the indices are stored in the buffer, and are all front facing
-      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = p_o + i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = p_o + i * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = p_o + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = p_o + i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = p_o + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = p_o + (i + 1) * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = point_index_offset + i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = point_index_offset + i * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = point_index_offset + i * geometry_resolution + j;
+      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = point_index_offset + (i + 1) * geometry_resolution + j;
       // the normals are stored in the buffer
       geometryNormals[3 * (i * geometry_resolution + j) + 0 + p_o] = outer.x;
       geometryNormals[3 * (i * geometry_resolution + j) + 1 + p_o] = outer.y;
       geometryNormals[3 * (i * geometry_resolution + j) + 2 + p_o] = outer.z;
 
-      geometryNodeIds[i * geometry_resolution + j + p_o] = stem->getNodeId(i);
+      geometryNodeIds[i * geometry_resolution + j + point_index_offset] = stem->getNodeId(i);
 
-      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 0 + p_o] = i / (double)stem->getNumberOfNodes();
-      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + p_o] = phi / (2 * M_PI);
+      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 0 + point_index_offset*2] = i / (double)stem->getNumberOfNodes();
+      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + point_index_offset*2] = phi / (2 * M_PI);
     }
   }
 }

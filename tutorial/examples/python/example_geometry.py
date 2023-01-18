@@ -16,15 +16,31 @@ path = "../../../modelparameter/plant/"
 
 plant.readParameters(path + "wheat_withStemLeaf.xml")
 
+# a function that filters an array by
+
+
 # Initialize
 plant.initialize()
 
 # Simulate
-plant.simulate(1, True)
+plant.simulate(8, True)
+
+print("This plant has ", plant.getNumberOfNodes(), " nodes")
+organs = plant.getOrgans()
+print("This plant has ", len(organs), " organs")
+if next((o for o in organs if o.getNumberOfNodes() <= 1), False) :
+  print("This plant an organ with only one node")
+else :
+  print("This plant has no organ without nodes")
+
+print("Organ node numbers are ", [o.getNumberOfNodes() for o in organs])
+print("Organ types are ", [o.organType() for o in organs])
+
+#plot cpb plant
+plant.write("test.vtp")
 
 print("test")
 
-vtkplant = vtk.vtkPolyData()
 print("Created the plant")
 
 print("Created Polydata")
@@ -35,13 +51,39 @@ print("Computing Geometry")
 plant.ComputeGeometry()
 print("Extracting Data")
 geom = np.array(plant.GetGeometry())
+
+print("Extracted Data")
+
+print("Creating VTK Data from node ids")
+nodeids = np.array(plant.GetGeometryNodeIds())
+nodeids = numpy_to_vtk(nodeids, deep=True)
+nodeids.SetName("nodeids")
+print("Adding VTK Data to Polydata")
+pd.GetPointData().AddArray(nodeids)
+
+print("Iterating through points to create points form geometry")
+points = vtk.vtkPoints()
+print("Created point array")
 print(geom.shape)
-geom = np.reshape(geom, (int(geom.shape[0]/3), 3))
-print(geom)
-points.SetData(numpy_to_vtk(geom))
+points.SetNumberOfPoints(geom.shape[0]//3)
+print("Setting ", geom.shape[0]//3, " points")
+for i in range(geom.shape[0]//3) :
+  points.SetPoint(i, geom[i*3], geom[i*3+1], geom[i*3+2])
+
+print("Getting the cells from the vis")
 cell_data = np.array(plant.GetGeometryIndices())
 cell_data = np.reshape(cell_data, (cell_data.shape[0]//3, 3))
-cells = numpy_to_vtk(cell_data)
+
+print("doing the same with the cells")
+cells = vtk.vtkCellArray()
+for i in range(cell_data.shape[0]) :
+  cells.InsertNextCell(3)
+  cells.InsertCellPoint(cell_data[i, 0])
+  cells.InsertCellPoint(cell_data[i, 1])
+  cells.InsertCellPoint(cell_data[i, 2])
+
+
+print("Adding points and cells to polydata")
 pd.SetPoints(points)
 pd.SetPolys(cells)
 
@@ -49,4 +91,16 @@ print("Extracted the Plant")
 
 print("test")
 
-print(vtkplant.GetPoints())
+print(pd.GetPoints())
+writer = vtk.vtkXMLPolyDataWriter()
+writer.SetFileName("test_geom.vtp")
+writer.SetDataModeToAscii()
+writer.SetInputData(pd)
+writer.Write()
+
+print("Written the Plant")
+
+print("Sanity check")
+print(pd.GetNumberOfPoints(), " points and ", pd.GetNumberOfCells(), " cells")
+print("Maximum cell id: ", cell_data.max())
+print("Minimum cell id: ", cell_data.min())

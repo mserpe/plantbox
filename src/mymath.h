@@ -258,6 +258,10 @@ public:
 */
 class Quaternion {
   public:
+
+    double w{};
+    Vector3d v{};
+
     Quaternion() = default;
     ~Quaternion() = default;
     Quaternion(double w, Vector3d v) : w(w), v(v) {}
@@ -281,6 +285,12 @@ class Quaternion {
 
     Quaternion operator*(const Quaternion& q) const {
       return Quaternion(w * q.w - v.times(q.v), q.v.times(w) + v.times(q.w) + v.cross(q.v));
+    }
+
+    std::string toString() const {
+      std::ostringstream strs;
+      strs << w << " + " << v.toString();
+      return strs.str();
     }
 
     friend Quaternion operator*(double s, const Quaternion& q) { return Quaternion(q.w * s, q.v * s); }
@@ -378,7 +388,9 @@ class Quaternion {
      * @note the formula is v' = q * v * q^-1
     */
     Vector3d Rotate(const Vector3d& v) const {
-      return (*this * Quaternion(0, v) * this->conjugate()).v;
+      Quaternion standin = *this;
+      standin.w = 1.0;
+      return (standin * Quaternion(0, v) * standin.conjugate()).v;
     }
 
     /**
@@ -454,7 +466,10 @@ class Quaternion {
     // this is basically the same as the implementation in the Unreal Engine
     inline static Quaternion geodesicRotation(Vector3d a, Vector3d b)
     {
-      auto w = a.times(b);
+      double w = 1.0;
+      // normalize the vectors
+      a.normalize();
+      b.normalize();
       // if the vectors are parallel, the rotation axis is undefined
       if(w < std::numeric_limits<double>::epsilon() && std::abs(a.x) <= std::abs(a.z))
         return Quaternion(w, Vector3d(0, -a.z, a.y));
@@ -485,9 +500,6 @@ class Quaternion {
       double ratioB = sin(t * half) / sinHalf;
       return {ratioA * a.w + ratioB * b.w, ratioA * a.v + ratioB * b.v};
     }
-
-    double w{};
-    Vector3d v{};
 };
 
 /**

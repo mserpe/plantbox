@@ -189,6 +189,7 @@ public:
   std::vector<double> GetGeometryNormals() { return geometryNormals; }
   std::vector<double> GetGeometryTextureCoordinates() { return geometryTextureCoordinates; }
   std::vector<unsigned int> GetGeometryIndices() { return geometryIndices; }
+  std::vector<int> GetGeometryNodeIds() { return geometryNodeIds; }
 
  protected:
 	void initialize_(bool verbose = true, bool stochastic = true, bool LB = true);

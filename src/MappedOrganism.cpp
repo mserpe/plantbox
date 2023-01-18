@@ -1089,18 +1089,18 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
       //std::cout << "Inserting some indices: " << geometryIndices.size() << " + 6 < " << geometryIndices.capacity() << std::endl;
 		if(i > first_surface_id)
 		{
-			geometryIndices[cell_index +  0] = point_index_offset-6;
-			geometryIndices[cell_index +  1] = point_index_offset-7;
-			geometryIndices[cell_index +  2] = point_index_offset-3;
-			geometryIndices[cell_index +  3] = point_index_offset-6;
-			geometryIndices[cell_index +  4] = point_index_offset-3;
-			geometryIndices[cell_index +  5] = point_index_offset-2;
-			geometryIndices[cell_index +  6] = point_index_offset-4;
-			geometryIndices[cell_index +  7] = point_index_offset-5;
-			geometryIndices[cell_index +  8] = point_index_offset-1;
-			geometryIndices[cell_index +  9] = point_index_offset-4;
-			geometryIndices[cell_index + 10] = point_index_offset-1;
-			geometryIndices[cell_index + 11] = point_index_offset-0;
+			geometryIndices[cell_index +  0] = point_index_offset-7;
+			geometryIndices[cell_index +  1] = point_index_offset-8;
+			geometryIndices[cell_index +  2] = point_index_offset-4;
+			geometryIndices[cell_index +  3] = point_index_offset-7;
+			geometryIndices[cell_index +  4] = point_index_offset-4;
+			geometryIndices[cell_index +  5] = point_index_offset-3;
+			geometryIndices[cell_index +  6] = point_index_offset-5;
+			geometryIndices[cell_index +  7] = point_index_offset-6;
+			geometryIndices[cell_index +  8] = point_index_offset-2;
+			geometryIndices[cell_index +  9] = point_index_offset-5;
+			geometryIndices[cell_index + 10] = point_index_offset-2;
+			geometryIndices[cell_index + 11] = point_index_offset-1;
 			cell_index += 12;
 		}
 		//std::cout << "Inserted" << std::endl;

@@ -1023,12 +1023,12 @@ void MappedPlant::MapPropertyToColors(std::string property, std::vector<double> 
 void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int petiole_zone, unsigned int p_o, unsigned int c_o)
 {
   // std::vector::reserve should be idempotent.
-  //std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
+  std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
 	int first_surface_id = petiole_zone + 1;
-	int total_points = leaf->getNumberOfNodes() - petiole_zone;
+	int total_points = leaf->getNumberOfNodes() - first_surface_id;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometry.size()), -1.0);
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometryNormals.size()), -1.0);
-	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 6), geometryIndices.size()), static_cast<unsigned int>(-1));
+	geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (total_points - 1) * 12), geometryIndices.size()), static_cast<unsigned int>(-1));
 	geometryColors.resize(std::max(static_cast<std::size_t>((p_o/3) + total_points * 4 * 3), geometryColors.size()), static_cast<unsigned short>(-1));
 	geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + total_points * 4 * 2), geometryTextureCoordinates.size()), -1.0);
 	geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o/3 + total_points * 4), geometryNodeIds.size()), -1);
@@ -1086,17 +1086,24 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
     // The triangles are defined clockwise for the front face and counter clockwise for the back face
 		
 		unsigned int point_index_offset = points_index / 3;
-    if(i > first_surface_id)
-    {
       //std::cout << "Inserting some indices: " << geometryIndices.size() << " + 6 < " << geometryIndices.capacity() << std::endl;
-      geometryIndices.insert(geometryIndices.begin() + cell_index, 
-      {point_index_offset-6, point_index_offset-7, point_index_offset-3,
-			point_index_offset-6, point_index_offset-3, point_index_offset-2,
-       point_index_offset-4, point_index_offset-5, point_index_offset-1,
-			 point_index_offset-4, point_index_offset-1, point_index_offset-0});
-      cell_index += 12;
-      //std::cout << "Inserted" << std::endl;
-    }
+		if(i > first_surface_id)
+		{
+			geometryIndices[cell_index +  0] = point_index_offset-6;
+			geometryIndices[cell_index +  1] = point_index_offset-7;
+			geometryIndices[cell_index +  2] = point_index_offset-3;
+			geometryIndices[cell_index +  3] = point_index_offset-6;
+			geometryIndices[cell_index +  4] = point_index_offset-3;
+			geometryIndices[cell_index +  5] = point_index_offset-2;
+			geometryIndices[cell_index +  6] = point_index_offset-4;
+			geometryIndices[cell_index +  7] = point_index_offset-5;
+			geometryIndices[cell_index +  8] = point_index_offset-1;
+			geometryIndices[cell_index +  9] = point_index_offset-4;
+			geometryIndices[cell_index + 10] = point_index_offset-1;
+			geometryIndices[cell_index + 11] = point_index_offset-0;
+			cell_index += 12;
+		}
+		//std::cout << "Inserted" << std::endl;
   }
       //std::cout << "Done" << std::endl;
 }

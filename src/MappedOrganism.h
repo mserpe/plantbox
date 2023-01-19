@@ -214,6 +214,14 @@ public:
   */
   void GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o = 0, unsigned int c_o = 0);
   
+  /**
+   * @brief A private method to generate a geometry for a radial leaf representation
+   * @param leaf the leaf to generate the geometry for
+   * @param p_o the point offset (mainly internal)
+   * @param c_o the cell offset (mainly internal)
+   * @note using a shared_ptr as parameter might be less efficient, but only O(1)
+   */
+    void GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
 
   /* Geometry buffers */
   std::vector<double> geometry; // x,y,z coordinates

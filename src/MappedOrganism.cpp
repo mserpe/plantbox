@@ -876,20 +876,29 @@ void MappedPlant::ComputeGeometryForOrgan(int organId)
 		point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
 		cell_space += (organ->getNumberOfNodes() - 1) * 2 * geometry_resolution;
 		auto leaf = std::dynamic_pointer_cast<Leaf>(organ);
-		int petiole_zone = 0;
-		for(int i = 0; i < leaf->getNumberOfNodes(); i++)
+		if(leaf->getLeafRandomParameter()->parametrisationType == 1)
 		{
-			if(leaf->nodeLeafVis(leaf->getLength(i)))
-			{
-				petiole_zone = i;
-				break;
-			}
+			GenerateRadialLeafGeometry(leaf, point_space, cell_space);
+			point_space += leaf->getNumberOfNodes() * 6 * 3;
+			cell_space += leaf->getNumberOfNodes() * 6;
 		}
-		if(petiole_zone + 1 < leaf->getNumberOfNodes())
+		else
 		{
-			GenerateLeafGeometry(leaf, petiole_zone, point_space, cell_space);
-			point_space += (organ->getNumberOfNodes() - petiole_zone) * 6 * 3;
-			cell_space += (organ->getNumberOfNodes() - petiole_zone) * 6;
+			int petiole_zone = 0;
+			for(int i = 0; i < leaf->getNumberOfNodes(); i++)
+			{
+				if(leaf->nodeLeafVis(leaf->getLength(i)))
+				{
+					petiole_zone = i;
+					break;
+				}
+			}
+			if(petiole_zone + 1 < leaf->getNumberOfNodes())
+			{
+				GenerateLeafGeometry(leaf, petiole_zone, point_space, cell_space);
+				point_space += (organ->getNumberOfNodes() - petiole_zone) * 6 * 3;
+				cell_space += (organ->getNumberOfNodes() - petiole_zone) * 6;
+			}
 		}
   }
   else
@@ -959,28 +968,31 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
       //cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
       point_space = geometry.size();
       cell_space = geometryIndices.size();
-
-      // 4 SHOULD mean leaf, so we do not check for successful cast
-			int petiole_zone = 0;
-      //std::cout << "Calculating petiole zone" << std::endl;
-			for(int i = 0; i < leaf->getNumberOfNodes(); i++)
+			
+			if(leaf->getLeafRandomParameter()->parametrisationType == 1)
 			{
-				if(!leaf->nodeLeafVis(leaf->getLength(i)))
-				{
-					petiole_zone = i;
-				}
-        else break;
+				std::cout << "Generating radial leaf geometry" << std::endl;
+				GenerateRadialLeafGeometry(leaf, point_space, cell_space);
+				point_space = geometry.size();
+				cell_space = geometryIndices.size();
 			}
-      //std::cout << "Petiole zone is " << petiole_zone << std::endl;
-			if(petiole_zone + 1 < leaf->getNumberOfNodes())
+			else
 			{
-        //std::cout << "Generating geometry for leaf " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
-				GenerateLeafGeometry(leaf, petiole_zone, point_space, cell_space);
-				//point_space += (organ->getNumberOfNodes() - petiole_zone) * 6 * 3;
-				//cell_space += (organ->getNumberOfNodes() - petiole_zone) * 6;
-        point_space = geometry.size();
-        cell_space = geometryIndices.size();
-        //std::cout << "Leaf geometry done" << std::endl;
+				int petiole_zone = 0;
+				for(int i = 0; i < leaf->getNumberOfNodes(); i++)
+				{
+					if(!leaf->nodeLeafVis(leaf->getLength(i)))
+					{
+						petiole_zone = i;
+					}
+					else break;
+				}
+				if(petiole_zone + 1 < leaf->getNumberOfNodes())
+				{
+					GenerateLeafGeometry(leaf, petiole_zone, point_space, cell_space);
+					point_space = geometry.size();
+					cell_space = geometryIndices.size();
+				}
 			}
     }
     else
@@ -1168,6 +1180,83 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + point_index_offset*2] = phi / (2 * M_PI);
     }
   }
+}
+
+void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o, unsigned int c_o)
+{
+	// Fetch the phi array
+  std::vector < double > phi = leaf->getLeafRandomParameter()->leafGeometryPhi;
+	double diameter = leaf->getParameter("areaMax") * leaf->getLength(false) / leaf->getParameter("k");
+	// check length of phi array
+	// check node length
+	// extend geometry buffers
+  this->geometry.resize(std::max(static_cast<std::size_t>(p_o + phi.size() * 3), this->geometry.size()),-1.0);
+	this->geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (phi.size() - 1) * 3), this->geometryIndices.size()),static_cast<unsigned int>(-1));
+	this->geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + phi.size() * 3), this->geometryNormals.size()),-1.0);
+	this->geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + phi.size() * 2), this->geometryTextureCoordinates.size()),-1.0);
+	this->geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o / 3 + phi.size()), this->geometryNodeIds.size()),-1);
+
+	// Compute leaf orientation from heading
+	std::cout << "Finding central node " << leaf->getNodeIds().size() << " nodes" << std::endl;
+	auto central_id = [leaf]() -> int {
+		int i = 0; while(!leaf->nodeLeafVis(leaf->getLength(i))) i++;
+		return i;
+	}();
+	std::cout << "Central node number is " << central_id << std::endl;
+	auto central_position = leaf->getNode(central_id);
+	std::cout << "Central node position is " << central_position.toString() << std::endl;
+  Quaternion heading = Quaternion::FromMatrix3d(leaf->iHeading);
+	auto up = heading.Up();
+	std::cout << "Adding central point to the buffers" << std::endl;
+	geometry[p_o + 0] = central_position.x;
+	geometry[p_o + 1] = central_position.y;
+	geometry[p_o + 2] = central_position.z;
+	geometryNormals[p_o + 0] = up.x;
+	geometryNormals[p_o + 1] = up.y;
+	geometryNormals[p_o + 2] = up.z;
+	geometryNodeIds[p_o / 3] = leaf->getNodeId(central_id);
+	geometryTextureCoordinates[p_o / 3 * 2 + 0] = 0.5;
+	geometryTextureCoordinates[p_o / 3 * 2 + 1] = 0.5;
+	// Triangulate leaf depending on phi array (divisibility by two)
+	//std::cout << "Generating leaf geometry with " << phi.size() << " points" << std::endl;
+	for(auto i = 0; i < phi.size(); ++i)
+	{
+		std::cout << "Generating point " << i << std::endl;
+		// Compute point position from phi
+		// compute the outer point based on the phi and diameter
+		// if phi = 0 is the middle of the leaf, then we need to rotate the point by 90 degrees
+		// to get the correct orientation
+		Vector3d outer = Vector3d(diameter * cos(phi[i]), diameter * sin(phi[i]), 0);
+		std::cout << "Outer point is " << outer.toString() << std::endl;
+		// rotate the point by 90 degrees
+		outer = heading.Rotate(outer);
+		//std::cout << "Rotating " << heading.toString() << " to get " << outer.toString() << std::endl;
+		// the plus 3 is the offset for the central point
+		geometry[p_o + 3 * i + 0 + 3] = outer.x + central_position.x;
+		geometry[p_o + 3 * i + 1 + 3] = outer.y + central_position.y;
+		geometry[p_o + 3 * i + 2 + 3] = outer.z + central_position.z;
+		// we triangulate based on the central point
+		// the first triangle is a triangle with the central point and the first two points
+		// from there on, we add a new point and a triangle with the previous point
+		if( i < phi.size() - 1)
+		{
+			geometryIndices[3 * i + 0 + c_o] = p_o / 3;
+			geometryIndices[3 * i + 1 + c_o] = p_o / 3 + i;
+			geometryIndices[3 * i + 2 + c_o] = p_o / 3 + i + 1;
+		}
+		// the normals are the local up vector
+		geometryNormals[3 * i + 0 + p_o + 3] = up.x;
+		geometryNormals[3 * i + 1 + p_o + 3] = up.y;
+		geometryNormals[3 * i + 2 + p_o + 3] = up.z;
+
+		geometryNodeIds[i + p_o / 3] = leaf->getNodeId(central_id);
+
+		// ideally, the texture coordinates should accurately span the leaf
+		// in a way that projects a square onto the leaf
+		// for now, we just use the phi array
+		geometryTextureCoordinates[2 * i + 0 + p_o / 3 * 2] = phi[i];
+		geometryTextureCoordinates[2 * i + 1 + p_o / 3 * 2] = diameter;
+	}
 }
 
 } // namespace

@@ -12,6 +12,15 @@
 
 namespace CPlantBox {
 
+  /** 
+   * An enum that contains the options for how the leafs should be geometrized
+  */
+ enum class LeafGeometrizationType {
+  BuiltIn = 0, // Use the build in geometrization
+  Linear = 1, // Use a linear geometrization
+  Catmull = 2, // Use a catmull rom spline geometrization
+ }
+
 /**
  * Represents a connected 1d rootsystem as segments, which are mapped to a 3d soil grid.
  *
@@ -126,6 +135,7 @@ public:
 
     using Plant::Plant;
 	MappedPlant(double seednum = 0): Plant(seednum){}; ///< constructor
+
     virtual ~MappedPlant() { }; ///< destructor
 	
     void initializeLB(bool verbose = true, bool stochastic = true) { bool LB = true; initialize_(verbose, stochastic, LB); }; ///< overridden, to map initial shoot segments,
@@ -134,6 +144,9 @@ public:
     void simulate(double dt, bool verbose) override ; ///< build nodes and segments sequentially
     void printNodes(); ///< print information
 	void mapSubTypes();
+
+  // which leaf geomtrization to use
+  LeafGeometrizationType LeafType = LeafGeometrizationType::BuiltIn; // default
 
     std::shared_ptr<MappedSegments> mappedSegments() { return std::make_shared<MappedSegments>(*this); }  // up-cast for Python binding
     std::shared_ptr<Plant> plant() { return std::make_shared<Plant>(*this); }; // up-cast for Python binding
@@ -222,6 +235,16 @@ public:
    * @note using a shared_ptr as parameter might be less efficient, but only O(1)
    */
     void GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
+
+    /**
+     * @brief Generates the outer points of a leaf based on the spline interpolation between angles
+     * 
+     * @param leaf The leaf to generate the points for
+     * @param phi The angular values of the leaf
+     * @param resolution How many points to generate per side
+     * @return std::vector<Vector3d> 
+     */
+    std::vector<Vector3d> GenerateOuterPoints(std::shared_ptr<Leaf> leaf, std::vector<double> phi, int resolution = 20);
 
   /* Geometry buffers */
   std::vector<double> geometry; // x,y,z coordinates

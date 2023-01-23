@@ -381,6 +381,16 @@ class Quaternion {
       return w * q.w + v.times(q.v);
     }
 
+    // a method that calculates a quaternion from a forward vector.
+    static Quaternion FromForward(const Vector3d& forward) {
+      Vector3d up(0, 0, 1);
+      Vector3d right = up.cross(forward);
+      up = forward.cross(right);
+      right.normalize();
+      up.normalize();
+      return Quaternion::FromMatrix3d(Matrix3d(right, up, forward));
+    }
+
     /**
      * @brief Rotates a vector by the quaternion
      * @param v vector to rotate
@@ -391,6 +401,17 @@ class Quaternion {
       Quaternion standin = *this;
       standin.w = 1.0;
       return (standin * Quaternion(0, v) * standin.conjugate()).v;
+    }
+
+    /**
+     * @brief A method that rotates a vector, ensuring uniform scale
+     * @param v vector to rotate
+     * @return rotated vector
+     */
+    Vector3d RotateUniform(const Vector3d& v) const {
+      Quaternion standin = *this;
+      standin.w = 1.0;
+      return (standin * Quaternion(0, v) * standin.conjugate()).v * norm();
     }
 
     /**
@@ -442,6 +463,15 @@ class Quaternion {
       return (Forward() * x + Right() * y + Up() * z);
     }
 
+    // a method that selects the shortest arc between two quaternions
+    static Quaternion ShortestArc(const Quaternion& a, const Quaternion& b)
+    {
+      if (a.dot(b) < 0)
+        return a * -1.0;
+      else
+        return a;
+    }
+
     /**
      * @brief Static method to compute look-at-direction between two points
      * @param from the point to look from
@@ -480,6 +510,7 @@ class Quaternion {
       else
         return Quaternion(w, a.cross(b)).normalized();
     }
+
 
     // this method provides a spherical interpolation between two quaternions
     inline static Quaternion SphericalInterpolation(Quaternion a, Quaternion b, double t = 0.5)
@@ -581,57 +612,89 @@ public:
     double r = r0 + b*(r1-r0);
     return (p-x0-b*v).length() < r;
  }
-
 };
 
 /**
  * Catmull-Rom spline interpolation
+ * It is used to store the Catmull-Rom splines of depth 4
 */
-class CatmullRomSpline {
+class CatmullRomSpline
+{
   public:
   CatmullRomSpline() = default;
-  CatmullRomSpline(std::vector<Vector3d> y) : y(y) {
-    computeT();
+  CatmullRomSpline(Vector3d y0, Vector3d y1, Vector3d y2, Vector3d y3, double t0, double t1) : y0(y0), y1(y1), y2(y2), y3(y3), t0(t0), t1(t1) {}
+  CatmullRomSpline(std::vector<Vector3d> y, double t0, double t1) : y0(y[0]), y1(y[1]), y2(y[2]), y3(y[3]), t0(t0), t1(t1) {}
+  Vector3d operator() (double t) const {
+    double t_ = (t-t0)/(t1-t0);
+    return 0.5 * ((2.0*y1) + (-y0 + y2) * t_ + (2.0*y0 - 5.0*y1 + 4.0*y2 - y3) * t_ * t_ + (-y0 + 3.0*y1 - 3.0*y2 + y3) * t_ * t_ * t_);
   }
 
+  double getT0() const { return t0; }
+  double getT1() const { return t1; }
+
+  Vector3d derivative(double t) const {
+    double t_ = (t-t0)/(t1-t0);
+    return 0.5 * ((-y0 + y2) + (2.0*y0 - 5.0*y1 + 4.0*y2 - y3) * 2 * t_ + (-y0 + 3.0*y1 - 3.0*y2 + y3) * 3.0 * t_ * t_);
+  }
+
+  Vector3d operator[](int i) {
+    switch(i) {
+      case 0: return y0;
+      case 1: return y1;
+      case 2: return y2;
+      case 3: return y3;
+      default: throw std::runtime_error("CatmullRomSpline: index out of bounds");
+    }
+  }
+
+  Quaternion computeOrientation(double t) const {
+    Vector3d v = derivative(t);
+    return Quaternion::FromForward(v);
+  }
+
+  private:
+  // the control points of the spline
+  Vector3d y0, y1, y2, y3;
+  // start and end time of the spline
+  double t0, t1;
+};
+
+/**
+ * A manager class for the Catmull-Rom spline interpolation
+ * It is used to store the Catmull-Rom splines of depth 4
+ * We use a weighted average of the splines to get a smooth transition
+*/
+class CatmullRomSplineManager
+{
+  public:
+  CatmullRomSplineManager() = default;
+  CatmullRomSplineManager(std::vector<Vector3d> y) : y(y) {
+    computeT();
+  }
+  Vector3d operator() (double t) const {
+    Vector3d p(0,0,0);
+    int sum = 0;
+    for(int i = 0; i < splines.size(); i++)
+    {
+      // whether the spline has t in its interval
+      bool in = t >= splines[i].getT0() && t <= splines[i].getT1();
+      // we add the spline if it is in the interval
+      if(in)
+      {
+        p = p + splines[i](t);
+        sum++;
+      }
+    }
+    return p / static_cast<double>(sum);
+  }
   void setY(std::vector<Vector3d> y) {
     this->y = y;
     computeT();
   }
-  Vector3d operator() (double t) const {
-    int i = std::min(std::max(0, int(t)), int(y.size()-2)); // size returns unsigned so int()
-    return computeY(t, i);
-  }
-  private:
-  
-  /**
-   * Computes the Catmull-Rom spline interpolation
-   * This works iteratively, so it is not very efficient
-   * It takes into account all the points in the spline
-   * As it modifies the allocated memory, it is not thread safe
-   * Because stages_y is mutable, this method is also const
-   * @param t the parameter
-   * @param i the index of the point
-  */
-  Vector3d computeY(double t, int i) const {
-    t = (t - yt[i]) / (yt[i+1] - yt[i]);
-    if (stages_y[i].size() == 1) {
-      return stages_y[i][0];
-    }
-    for (int j = 0; j < stages_y[0].size(); j++) {
-      stages_y[0][j] = (yt[j] - t) / (yt[j+1] - yt[j]) * y[j] + (t - yt[j]) / (yt[j+1] - yt[j]) * y[j+1];
-    }
-    for(int i = 1; i < stages_y.size(); i++) {
-      for(int j = 0; j < stages_y[i].size(); j++) {
-        stages_y[i][j] = (yt[j] - t) / (yt[j+1] - yt[j]) * stages_y[i-1][j] + (t - yt[j]) / (yt[j+1] - yt[j]) * stages_y[i-1][j+1];
-      }
-    }
-    return stages_y.back().back();
-  }
 
-/**
- * Computes t values for the Catmull-Rom spline interpolation
-*/
+
+  private:
+
   void computeT()
   {
     yt.clear();
@@ -644,20 +707,19 @@ class CatmullRomSpline {
     {
       yt[i] /= yt.back();
     }
-    for (int i = y.size(); i > 0; i--) {
-      stages_y.push_back(std::vector<Vector3d>(i));
+    splines.clear();
+    for(int i = 0; i < y.size()-3; i++)
+    {
+      splines.push_back(CatmullRomSpline({y[i], y[i+1], y[i+2], y[i+3]}, yt[i], yt[i+3]));
     }
   }
 
-
-  std::vector<Vector3d> y;
-  std::vector<double> yt;
-
-  // this is a mutable property because it resets upon each call
-  // it is much nicer to prepare the memory before calling the interpolation
-  mutable std::vector<std::vector<Vector3d>> stages_y;
+  std::vector<Vector3d> y; // control points
+  std::vector<double> yt; // t values
+  std::vector<CatmullRomSpline> splines;
 };
 
 } // end namespace CPlantBox
+
 
 #endif

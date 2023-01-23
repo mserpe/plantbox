@@ -27,6 +27,7 @@ namespace CPlantBox {
     return vec2Buf(buffer, offset, args...);
   }
 
+
 /**
  * A static plant, as needed for flux computations, represented as
  *
@@ -1186,77 +1187,99 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 {
 	// Fetch the phi array
   std::vector < double > phi = leaf->getLeafRandomParameter()->leafGeometryPhi;
-	double diameter = leaf->getParameter("areaMax") * leaf->getLength(false) / leaf->getParameter("k");
-	// check length of phi array
-	// check node length
-	// extend geometry buffers
+	double scaling_factor = leaf->getParameter("areaMax") * leaf->getLength(false) / leaf->getParameter("k");
+
+	// resolution
+	int resolution = 100;
+	// Compute the mid vein of the leaf
+	CatmullRomSplineManager midVein = leaf->getNodes();
+	// Compute the leaf length
+	auto length = leaf->getLength(false);
+	// get outer points
+
+	// get leaf random parameter
+	auto lrp = leaf->getLeafRandomParameter();
+	// get the leaf length
+	auto length = leaf->getLength(false);
+
+	// create leaf radial geometry
+	// greate points for the leaf outer
+	lrp->createLeafRadialGeometry(lrp->leafGeometryPhi,lrp->leafGeometryX,resolution);
+	// retrieve the leaf geometry
+	const auto& outer_geometry_points = lrp->leafGeometry;
+  // set buffer sizes
+  int point_buffer = 0;
+  int index_buffer = 0;
+  for (auto i = 0; i < outer_geometry_points.size(); ++i)
+  {
+    point_buffer += outer_geometry_points[i].size() * 3;
+    index_buffer += (outer_geometry_points[i].size() - 1) * 3;
+  }
+  // increase geometry buffers
   this->geometry.resize(std::max(static_cast<std::size_t>(p_o + phi.size() * 3), this->geometry.size()),-1.0);
 	this->geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + (phi.size() - 1) * 3), this->geometryIndices.size()),static_cast<unsigned int>(-1));
 	this->geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + phi.size() * 3), this->geometryNormals.size()),-1.0);
 	this->geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + phi.size() * 2), this->geometryTextureCoordinates.size()),-1.0);
 	this->geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o / 3 + phi.size()), this->geometryNodeIds.size()),-1);
-
-	// Compute leaf orientation from heading
-	std::cout << "Finding central node " << leaf->getNodeIds().size() << " nodes" << std::endl;
-	auto central_id = [leaf]() -> int {
-		int i = 0; while(!leaf->nodeLeafVis(leaf->getLength(i))) i++;
-		return i;
-	}();
-	std::cout << "Central node number is " << central_id << std::endl;
-	auto central_position = leaf->getNode(central_id);
-	std::cout << "Central node position is " << central_position.toString() << std::endl;
-  Quaternion heading = Quaternion::FromMatrix3d(leaf->iHeading);
-	auto up = heading.Up();
-	std::cout << "Adding central point to the buffers" << std::endl;
-	geometry[p_o + 0] = central_position.x;
-	geometry[p_o + 1] = central_position.y;
-	geometry[p_o + 2] = central_position.z;
-	geometryNormals[p_o + 0] = up.x;
-	geometryNormals[p_o + 1] = up.y;
-	geometryNormals[p_o + 2] = up.z;
-	geometryNodeIds[p_o / 3] = leaf->getNodeId(central_id);
-	geometryTextureCoordinates[p_o / 3 * 2 + 0] = 0.5;
-	geometryTextureCoordinates[p_o / 3 * 2 + 1] = 0.5;
-	// Triangulate leaf depending on phi array (divisibility by two)
-	//std::cout << "Generating leaf geometry with " << phi.size() << " points" << std::endl;
-	for(auto i = 0; i < phi.size(); ++i)
+	// get the number of points
+	// iterate through the representation with implicit y's only
+  const std::vector<double>* last = outer_geometry_points.data();
+  const std::vector<double>* current;
+	for(auto i = 0; i < outer_geometry_points.size(); ++i)
 	{
-		std::cout << "Generating point " << i << std::endl;
-		// Compute point position from phi
-		// compute the outer point based on the phi and diameter
-		// if phi = 0 is the middle of the leaf, then we need to rotate the point by 90 degrees
-		// to get the correct orientation
-		Vector3d outer = Vector3d(diameter * cos(phi[i]), diameter * sin(phi[i]), 0);
-		std::cout << "Outer point is " << outer.toString() << std::endl;
-		// rotate the point by 90 degrees
-		outer = heading.Rotate(outer);
-		//std::cout << "Rotating " << heading.toString() << " to get " << outer.toString() << std::endl;
-		// the plus 3 is the offset for the central point
-		geometry[p_o + 3 * i + 0 + 3] = outer.x + central_position.x;
-		geometry[p_o + 3 * i + 1 + 3] = outer.y + central_position.y;
-		geometry[p_o + 3 * i + 2 + 3] = outer.z + central_position.z;
-		// we triangulate based on the central point
-		// the first triangle is a triangle with the central point and the first two points
-		// from there on, we add a new point and a triangle with the previous point
-		if( i < phi.size() - 1)
-		{
-			geometryIndices[3 * i + 0 + c_o] = p_o / 3;
-			geometryIndices[3 * i + 1 + c_o] = p_o / 3 + i;
-			geometryIndices[3 * i + 2 + c_o] = p_o / 3 + i + 1;
-		}
-		// the normals are the local up vector
-		geometryNormals[3 * i + 0 + p_o + 3] = up.x;
-		geometryNormals[3 * i + 1 + p_o + 3] = up.y;
-		geometryNormals[3 * i + 2 + p_o + 3] = up.z;
+    double t = static_cast<double>(i) / static_cast<double>(resolution);
+		double l = t * length;
+    auto midpoint = midVein(t);
+    // get the current point
+    current = &outer_geometry_points[i];
+    // input points, normaly, ids, texture coordinates
+    // iterate through the points
+    for(auto i = 0; i < current->size(); ++i)
+    {
+      auto r = current->at(i);
+      // get the point
+      Quaternion local_q = midVein.computeQuaternion(l);
+      // this better work
+      Vector3d point = midVein(l) + local_q.Rotate(r * Vector3d(0.0, scaling_factor, 0.0));
+      // set the point
+      geometry[p_o + 0] = point.x;
+      geometry[p_o + 1] = point.y;
+      geometry[p_o + 2] = point.z;
+      // set the normal
+      auto up = local_q.Up();
+      geometryNormals[p_o + 0] = up.x;
+      geometryNormals[p_o + 1] = up.y;
+      geometryNormals[p_o + 2] = up.z;
+      // set the texture coordinates
+      geometryTextureCoordinates[p_o++] = t;
+      geometryTextureCoordinates[p_o++] = r;
+    }
+    if(i > 0)
+    {
+      // use the case distinction between number of intersections
+      // for the triangulation between connected sections of the surface
+      if(current->size() == last->size())
+      {
+        // we construct pairwise triangles for the two sections
+        for(auto j = 0; j < current->size(); j += 2)
+        {
 
-		geometryNodeIds[i + p_o / 3] = leaf->getNodeId(central_id);
+        }
+      }
+      else if(current->size() > last->size())
+      {
 
-		// ideally, the texture coordinates should accurately span the leaf
-		// in a way that projects a square onto the leaf
-		// for now, we just use the phi array
-		geometryTextureCoordinates[2 * i + 0 + p_o / 3 * 2] = phi[i];
-		geometryTextureCoordinates[2 * i + 1 + p_o / 3 * 2] = diameter;
+      }
+      else
+      {
+
+      }
+    }
 	}
+}
+
+std::vector<Vector3d> MappedPlant::GenerateOuterPoints(std::shared_ptr<Leaf> leaf, std::vector<double> phi, int resolution)
+{
 }
 
 } // namespace

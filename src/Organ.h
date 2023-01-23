@@ -76,6 +76,7 @@ public:
     int getNumberOfSegments() const { return nodes.size()-1; } ///<  per default, the organ is represented by a polyline, i.e. getNumberOfNodes()-1
     Vector3d getOrigin() const { return getParent()->getNode(parentNI); }; ///< absolute coordinate of the organs origin
     virtual Vector3d getNode(int i) const { return nodes.at(i); } ///< i-th node of the organ, absolute coordinates per defaul
+    const std::vector<Vector3d>& getNodes() const { return nodes; } ///< all nodes of the organ, absolute coordinates per defaul
     int getNodeId(int i) const { return nodeIds.at(i); } ///< global node index of the i-th node, i is called the local node index
 	std::vector<int> getNodeIds() const { return nodeIds; } ///< global node index of the i-th node, i is called the local node index
     double getNodeCT(int i) const { return nodeCTs.at(i); } ///< creation time of the i-th node

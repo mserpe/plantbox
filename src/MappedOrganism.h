@@ -19,7 +19,7 @@ namespace CPlantBox {
   BuiltIn = 0, // Use the build in geometrization
   Linear = 1, // Use a linear geometrization
   Catmull = 2, // Use a catmull rom spline geometrization
- }
+ };
 
 /**
  * Represents a connected 1d rootsystem as segments, which are mapped to a 3d soil grid.

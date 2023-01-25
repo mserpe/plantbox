@@ -1232,27 +1232,32 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
     auto midpoint = midVein(t);
     // get the current point
     current = &outer_geometry_points[i];
+		// get the best spline for the current point
+		auto select_spline = midVein.selectSpline(l);
     // input points, normaly, ids, texture coordinates
     // iterate through the points
+		Quaternion local_q = select_spline.computeOrientation(l);
+		auto up = local_q.Up();
     for(auto i = 0; i < current->size(); ++i)
     {
       auto r = current->at(i);
       // get the point
-      Quaternion local_q = midVein.computeQuaternion(l);
-      // this better work
       Vector3d point = midVein(l) + local_q.Rotate(r * Vector3d(0.0, scaling_factor, 0.0));
       // set the point
       geometry[p_o + 0] = point.x;
       geometry[p_o + 1] = point.y;
       geometry[p_o + 2] = point.z;
       // set the normal
-      auto up = local_q.Up();
       geometryNormals[p_o + 0] = up.x;
       geometryNormals[p_o + 1] = up.y;
       geometryNormals[p_o + 2] = up.z;
       // set the texture coordinates
-      geometryTextureCoordinates[p_o++] = t;
-      geometryTextureCoordinates[p_o++] = r;
+      geometryTextureCoordinates[(p_o/3*2)] = t;
+      geometryTextureCoordinates[(p_o/3*2) + 0] = r;
+			// set the node id
+			geometryNodeIds[p_o/3] = leaf->getNodeId(i);
+			// increase buffer
+			p_o += 3;
     }
     if(i > 0)
     {
@@ -1263,11 +1268,74 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
         // we construct pairwise triangles for the two sections
         for(auto j = 0; j < current->size(); j += 2)
         {
-
+					// first triangle
+					geometryIndices[c_o++] = p_o - 2 * current->size() + j;
+					geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
+					geometryIndices[c_o++] = p_o - current->size() + j;
+					// second triangle
+					geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
+					geometryIndices[c_o++] = p_o - current->size() + j + 1;
+					geometryIndices[c_o++] = p_o - current->size() + j;
         }
       }
       else if(current->size() > last->size())
       {
+				// since we have more points in the current section
+				// we have to construct triangles with the midvein in mind
+				// we construct pairwise triangles for the two sections
+				geometry[p_o + 0] = midpoint.x;
+				geometry[p_o + 1] = midpoint.y;
+				geometry[p_o + 2] = midpoint.z;
+				// set the normal
+				geometryNormals[p_o + 0] = up.x;
+				geometryNormals[p_o + 1] = up.y;
+				geometryNormals[p_o + 2] = up.z;
+				// set the texture coordinates
+				geometryTextureCoordinates[(p_o/3*2)] = t;
+				geometryTextureCoordinates[(p_o/3*2) + 0] = 0.0;
+				// set the node id
+				geometryNodeIds[p_o/3] = leaf->getNodeId(i);
+				// set the triangles before we increase the buffer to keep the indices correct
+				// outer triangles are the only ones connected to the last outline points
+				// compute difference between the number of points
+				auto diff = current->size() - last->size();
+				// iterate through the top points until we reach the midvein plus the difference
+				for(auto j = 0; j < current->size()/2 -diff; ++j)
+				{
+					// first triangle
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j;
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j + 1;
+					geometryIndices[c_o++] = p_o - last->size() + j;
+					// second triangle
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j + 1;
+					geometryIndices[c_o++] = p_o - last->size() + j + 1;
+					geometryIndices[c_o++] = p_o - last->size() + j;
+				}
+				// iterate through the bottom points starting from the midvein plus the difference
+				for(auto j = current->size()/2+diff; j < current->size(); ++j)
+				{
+					// first triangle
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j;
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j + 1;
+					geometryIndices[c_o++] = p_o;
+					// second triangle
+					geometryIndices[c_o++] = p_o - 2 * last->size() + j + 1;
+					geometryIndices[c_o++] = p_o;
+					geometryIndices[c_o++] = p_o - last->size() + j + 1;
+				}
+				// iterate through the midvein points
+				// note that this is a specific interpretation of what happens here and might not be correct
+				// for a complete correct implementation of this, we would have to start with the phi array
+				for(auto j = 0; j < diff; ++j)
+				{
+					// we triangulate from one point against pairs of points
+					// so we only need one triangle, but with the most recent point included
+					geometryIndices[c_o++] = p_o - 2 * last->size() + current->size()/2 + j;
+					geometryIndices[c_o++] = p_o - 2 * last->size() + current->size()/2 + j + 1;
+					geometryIndices[c_o++] = p_o;
+				}
+				// increase buffer
+				p_o += 3;
 
       }
       else

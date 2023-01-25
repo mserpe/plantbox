@@ -671,6 +671,27 @@ class CatmullRomSplineManager
   CatmullRomSplineManager(std::vector<Vector3d> y) : y(y) {
     computeT();
   }
+
+  CatmullRomSpline spline(int i) const {
+    return splines[i];
+  }
+  
+  // a method that selects the most suitable spline depending on most equal distance to start and finish
+  CatmullRomSpline selectSpline(double t) const {
+    double min = std::numeric_limits<double>::max();
+    int index = 0;
+    for(int i = 0; i < splines.size(); i++)
+    {
+      double d = std::abs(splines[i].getT0() - t) + std::abs(splines[i].getT1() - t);
+      if(d < min)
+      {
+        min = d;
+        index = i;
+      }
+    }
+    return splines[index];
+  }
+
   Vector3d operator() (double t) const {
     Vector3d p(0,0,0);
     int sum = 0;

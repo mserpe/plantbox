@@ -12,9 +12,9 @@ import vtk
 
 plant = pb.MappedPlant()
 
-path = "../../../modelparameter/plant/"
+path = "./results/"
 
-plant.readParameters(path + "wheat_withStemLeaf.xml")
+plant.readParameters(path + "P0_plant.xml")
 
 # a function that filters an array by
 
@@ -23,7 +23,7 @@ plant.readParameters(path + "wheat_withStemLeaf.xml")
 plant.initialize()
 
 # Simulate
-plant.simulate(8, True)
+plant.simulate(60, True)
 
 print("This plant has ", plant.getNumberOfNodes(), " nodes")
 organs = plant.getOrgans()
@@ -32,9 +32,6 @@ if next((o for o in organs if o.getNumberOfNodes() <= 1), False) :
   print("This plant an organ with only one node")
 else :
   print("This plant has no organ without nodes")
-
-print("Organ node numbers are ", [o.getNumberOfNodes() for o in organs])
-print("Organ types are ", [o.organType() for o in organs])
 
 #plot cpb plant
 plant.write("test.vtp")
@@ -51,20 +48,34 @@ print("Computing Geometry")
 plant.ComputeGeometry()
 print("Extracting Data")
 geom = np.array(plant.GetGeometry())
+print(geom.shape)
 
 print("Extracted Data")
 
 print("Creating VTK Data from node ids")
 nodeids = np.array(plant.GetGeometryNodeIds())
+print(nodeids.shape)
 nodeids = numpy_to_vtk(nodeids, deep=True)
 nodeids.SetName("nodeids")
 print("Adding VTK Data to Polydata")
 pd.GetPointData().AddArray(nodeids)
 
+texcoords = np.array(plant.GetGeometryTextureCoordinates())
+print(texcoords.shape)
+texcoords = numpy_to_vtk(texcoords, deep=True)
+texcoords.SetName("texcoords")
+pd.GetPointData().AddArray(texcoords)
+
+normals = np.array(plant.GetGeometryNormals())
+print(normals.shape)
+normals = numpy_to_vtk(normals, deep=True)
+normals.SetName("normals")
+pd.GetPointData().AddArray(normals)
+
 print("Iterating through points to create points form geometry")
 points = vtk.vtkPoints()
 print("Created point array")
-print(geom.shape)
+print(geom.shape[0]//3, " points")
 points.SetNumberOfPoints(geom.shape[0]//3)
 print("Setting ", geom.shape[0]//3, " points")
 for i in range(geom.shape[0]//3) :

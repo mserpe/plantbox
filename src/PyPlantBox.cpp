@@ -962,6 +962,8 @@ PYBIND11_MODULE(plantbox, m) {
       .def("GetGeometryIndices",&MappedPlant::GetGeometryIndices)
       .def("GetGeometryTextureCoordinates",&MappedPlant::GetGeometryTextureCoordinates)
       .def("GetGeometryNodeIds", &MappedPlant::GetGeometryNodeIds)
+      .def("SetGeometryResolution",&MappedPlant::SetGeometryResolution, py::arg("resolution"))
+      .def("SetLeafResolution",&MappedPlant::SetLeafResolution, py::arg("resolution"))
   ;
 			
 	/*

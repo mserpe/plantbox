@@ -21,9 +21,11 @@ plant.readParameters(path + "P0_plant.xml")
 
 # Initialize
 plant.initialize()
+plant.SetGeometryResolution(8)
+plant.SetLeafResolution(20)
 
 # Simulate
-plant.simulate(60, True)
+plant.simulate(30, True)
 
 print("This plant has ", plant.getNumberOfNodes(), " nodes")
 organs = plant.getOrgans()

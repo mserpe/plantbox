@@ -145,6 +145,10 @@ public:
     void printNodes(); ///< print information
 	void mapSubTypes();
 
+  void SetGeometryResolution(int resolution) { this->geometry_resolution = resolution; } // set the resolution of the geometry (number of cells in each direction
+  void SetLeafGeometrizationType(LeafGeometrizationType type) { this->LeafType = type; }
+  void SetLeafResolution(int resolution) { this->leaf_resolution = resolution;}
+
   // which leaf geomtrization to use
   LeafGeometrizationType LeafType = LeafGeometrizationType::BuiltIn; // default
 
@@ -254,6 +258,7 @@ public:
   std::vector<double> geometryTextureCoordinates; // u,v coordinates
   std::vector<int> geometryNodeIds; // the node ids for each vertex
   unsigned int geometry_resolution = 8; // the resolution of the cylindric geometry
+  unsigned int leaf_resolution = 20; // the resolution of the leaf geometry
 };
 
 }

@@ -1186,18 +1186,17 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
 void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o, unsigned int c_o)
 {
 	// Fetch the phi array
-  std::vector < double > phi = leaf->getLeafRandomParameter()->leafGeometryPhi;
 	double scaling_factor = leaf->getParameter("areaMax") * leaf->getLength(false) / leaf->getParameter("k");
 
 	// resolution
-	int resolution = 100;
+	int resolution = leaf_resolution;
 	// Compute the mid vein of the leaf
 	CatmullRomSplineManager midVein = leaf->getNodes();
 	// Compute the leaf length
 	auto length = leaf->getLength(false);
 	// save c_o
 	unsigned int start_c_o = c_o;
-  // std::cout << "Generating leaf random parameter for leaf " << leaf->getId() << std::endl;
+  // std::cout << "Accessing leaf random parameter for leaf " << leaf->getId() << std::endl;
 	// get leaf random parameter
 	auto lrp = leaf->getLeafRandomParameter();
 
@@ -1212,17 +1211,20 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
   int index_buffer = 0;
   int last_amount = -1;
   int last_non_petiole = -1;
-  // std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
+  std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
   for (auto i = 0; i < outer_geometry_points.size(); ++i)
   {
     if(outer_geometry_points[i].size() < 2)
     {
+      std::cout << "Skipping petiole at " << i << " because it has size " << outer_geometry_points[i].size() << std::endl;
 			last_non_petiole = -1;
       continue;
     }
+    std::cout << "NOT Skipping petiole at " << i << " because it has size " << outer_geometry_points[i].size() << std::endl;
     point_buffer += outer_geometry_points[i].size();
-    if(i > last_non_petiole && last_amount != outer_geometry_points[i].size())
+    if(last_non_petiole > -1 && i > last_non_petiole && last_amount != outer_geometry_points[i].size())
     {
+      std::cout << "Since the last amount was " << last_amount << " we will add some triangles" << std::endl;
       index_buffer += (std::min(last_amount, (int)outer_geometry_points[i].size()) - 1) * 6;
       index_buffer += (std::abs(last_amount - (int)outer_geometry_points[i].size()) - 1) * 3;
       point_buffer ++;
@@ -1249,8 +1251,6 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 	this->geometryTextureCoordinates.resize(std::max(static_cast<std::size_t>((p_o/3*2) + point_buffer * 2), this->geometryTextureCoordinates.size()),-1.0);
 	this->geometryNodeIds.resize(std::max(static_cast<std::size_t>(p_o / 3 + point_buffer), this->geometryNodeIds.size()),-1);
 	// get the number of points
-	// iterate through the representation with implicit y's only
-  const std::vector<double>* current;
   // std::cout << "Iterating through the line intersections and generating the geometry" << std::endl;
   last_amount = -1;
   last_non_petiole = -1;
@@ -1265,7 +1265,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		double l = t * length;
     auto midpoint = midVein(t);
     // get the current point
-    current = &outer_geometry_points[i];
+    const std::vector<double>& current = outer_geometry_points[i];
 		// get the best spline for the current point
 		auto select_spline = midVein.selectSpline(l);
     // input points, normaly, ids, texture coordinates
@@ -1274,10 +1274,10 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		auto up = local_q.Up();
     // iterate through the points
     //std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
-    for(auto k = 0; k < current->size(); ++k)
+    for(auto k = 0; k < current.size(); ++k)
     {
       //std::cout << p_o << "/" << geometry.size() << " ";
-      auto r = current->at(k);
+      auto r = current.at(k);
       // get the point
       //std::cout << "m" << " ";
       Vector3d point = midVein(l) + local_q.Rotate(r * Vector3d(0.0, scaling_factor, 0.0));
@@ -1301,25 +1301,25 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 			// increase buffer
 			p_o += 3;
     }
-    // std::cout << std::endl << "Generating the triangles for the current line intersection " << i;
+    std::cout << std::endl << "Generating the triangles for the current line intersection " << i << "(" << current.size() << ")" << std::endl;
     if(i > last_non_petiole && last_non_petiole >= 0)
     {
       // use the case distinction between number of intersections
       // for the triangulation between connected sections of the surface
-      if(current->size() == last_amount)
+      if(current.size() == last_amount)
       {
         // std::cout << " which is equal to the last one" << std::endl;
         // we construct pairwise triangles for the two sections
-        for(auto j = 0; j < current->size(); j += 2)
+        for(auto j = 0; j < current.size(); j += 2)
         {
 					// first triangle
-					geometryIndices[c_o++] = p_o - 2 * current->size() + j;
-					geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
-					geometryIndices[c_o++] = p_o - current->size() + j;
+					geometryIndices[c_o++] = p_o - 2 * current.size() + j;
+					geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
+					geometryIndices[c_o++] = p_o - current.size() + j;
 					// second triangle
-					geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
-					geometryIndices[c_o++] = p_o - current->size() + j + 1;
-					geometryIndices[c_o++] = p_o - current->size() + j;
+					geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
+					geometryIndices[c_o++] = p_o - current.size() + j + 1;
+					geometryIndices[c_o++] = p_o - current.size() + j;
         }
       }
       else
@@ -1339,16 +1339,16 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
         geometryTextureCoordinates[(p_o/3*2) + 0] = 0.0;
         // set the node id
         geometryNodeIds[p_o/3] = 1.0;
-        if(current->size() > last_amount)
+        if(current.size() > last_amount)
         {
           // std::cout << " which is larger to the last one" << std::endl;
           // set the triangles before we increase the buffer to keep the indices correct
           // outer triangles are the only ones connected to the last outline points
           // compute difference between the number of points
-          auto diff = current->size() - last_amount;
+          auto diff = current.size() - last_amount;
           // iterate through the top points until we reach the midvein plus the difference
           // std::cout << "iterate through the top points until we reach the midvein plus the difference" << std::endl;
-          for(auto j = 0; j < current->size()/2 -diff; ++j)
+          for(auto j = 0; j < current.size()/2 -diff; ++j)
           {
             // first triangle
             geometryIndices[c_o++] = p_o - 2 * last_amount + j;
@@ -1361,7 +1361,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
           }
           // iterate through the bottom points starting from the midvein plus the difference
           // std::cout << "iterate through the bottom points starting from the midvein plus the difference" << std::endl;
-          for(auto j = current->size()/2+diff; j < current->size(); ++j)
+          for(auto j = current.size()/2+diff; j < current.size(); ++j)
           {
             // first triangle
             geometryIndices[c_o++] = p_o - 2 * last_amount + j;
@@ -1380,8 +1380,8 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
           {
             // we triangulate from one point against pairs of points
             // so we only need one triangle, but with the most recent point included
-            geometryIndices[c_o++] = p_o - 2 * last_amount + current->size()/2 + j;
-            geometryIndices[c_o++] = p_o - 2 * last_amount + current->size()/2 + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * last_amount + current.size()/2 + j;
+            geometryIndices[c_o++] = p_o - 2 * last_amount + current.size()/2 + j + 1;
             geometryIndices[c_o++] = p_o;
           }
           // increase buffer
@@ -1390,30 +1390,30 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
         else
         {
           std::cout << " which is smaller to the last one" << std::endl;
-          auto diff = last_amount - current->size();
+          auto diff = last_amount - current.size();
           for(auto j = 0; j < last_amount/2 -diff; ++j)
           {
-            geometryIndices[c_o++] = p_o - current->size() + j;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j;
-            geometryIndices[c_o++] = p_o - current->size() + j;
-            geometryIndices[c_o++] = p_o - current->size() + j + 1;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
+            geometryIndices[c_o++] = p_o - current.size() + j;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j;
+            geometryIndices[c_o++] = p_o - current.size() + j;
+            geometryIndices[c_o++] = p_o - current.size() + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
           }
           for(auto j = last_amount/2+diff; j < last_amount; ++j)
           {
             geometryIndices[c_o++] = p_o;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j;
-            geometryIndices[c_o++] = p_o - current->size() + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j;
+            geometryIndices[c_o++] = p_o - current.size() + j + 1;
             geometryIndices[c_o++] = p_o;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + j + 1;
           }
           for(auto j = 0; j < diff; ++j)
           {
             geometryIndices[c_o++] = p_o;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + last_amount/2 + j + 1;
-            geometryIndices[c_o++] = p_o - 2 * current->size() + last_amount/2 + j;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + last_amount/2 + j + 1;
+            geometryIndices[c_o++] = p_o - 2 * current.size() + last_amount/2 + j;
           }
           p_o += 3;
         }

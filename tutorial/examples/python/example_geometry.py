@@ -15,17 +15,34 @@ plant = pb.MappedPlant()
 path = "./results/"
 
 plant.readParameters(path + "P0_plant.xml")
+time = 28
+leaf_res = 20
 
-# a function that filters an array by
+for p in plant.getOrganRandomParameter(pb.leaf):
+  p.lb =  0 # length of leaf stem
+  p.la,  p.lmax = 38.41053981, 38.41053981
+  p.areaMax = 54.45388021  # cm2, area reached when length = lmax
+  phi = np.array([-90,-80, -45, 0., 45, 90]) / 180. * np.pi
+  l = np.array([38.41053981,1 ,1, 0.3, 1, 38.41053981]) #distance from leaf center
+  p.tropismT = 1 # 6: Anti-gravitropism to gravitropism
+  #p.tropismN = 5
+  p.tropismS = 0.05
+  p.tropismAge = 5 #< age at which tropism switch occures, only used if p.tropismT = 6
+  p.createLeafRadialGeometry(phi, l, leaf_res)
+
+for p in plant.getOrganRandomParameter(pb.stem):
+  r= 0.758517633
+  p.r = r
+  p.lmax = (time-7)*r
 
 
 # Initialize
 plant.initialize()
 plant.SetGeometryResolution(8)
-plant.SetLeafResolution(20)
+plant.SetLeafResolution(leaf_res)
 
 # Simulate
-plant.simulate(30, True)
+plant.simulate(time, True)
 
 print("This plant has ", plant.getNumberOfNodes(), " nodes")
 organs = plant.getOrgans()
@@ -94,7 +111,6 @@ for i in range(cell_data.shape[0]) :
   cells.InsertCellPoint(cell_data[i, 0])
   cells.InsertCellPoint(cell_data[i, 1])
   cells.InsertCellPoint(cell_data[i, 2])
-
 
 print("Adding points and cells to polydata")
 pd.SetPoints(points)

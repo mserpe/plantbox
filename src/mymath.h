@@ -388,7 +388,23 @@ class Quaternion {
       up = forward.cross(right);
       right.normalize();
       up.normalize();
-      return Quaternion::FromMatrix3d(Matrix3d(right, up, forward));
+      return Quaternion::FromMatrix3d(Matrix3d(forward, right, up));
+    }
+
+    // a method that calculates a quaternion from a forward vector while respecting the previous up vector.
+    static Quaternion FromForwardAndUp(const Vector3d& forward, const Vector3d& prev_up)
+    {
+      // initial copy of the previous up vector
+      Vector3d up = prev_up;
+      // calculate the right vector
+      Vector3d right = up.cross(forward);
+      // calculate the new up vector
+      up = forward.cross(right);
+      // normalize the vectors
+      right.normalize();
+      up.normalize();
+      // return the quaternion as calculated from the matrix
+      return Quaternion::FromMatrix3d(Matrix3d(forward.normalized(), right, up));
     }
 
     /**
@@ -432,7 +448,7 @@ class Quaternion {
       double x = (m.r0.y - m.r1.z) / w4;
       double y = (m.r0.z - m.r2.x) / w4;
       double z = (m.r1.x - m.r0.y) / w4;
-      return Quaternion(w, Vector3d(x, y, z));
+      return Quaternion(w, Vector3d(x, y, z)).normalized();
     }
 
     // a method that returns a look-at-direction representing the local x axis
@@ -487,7 +503,7 @@ class Quaternion {
       // compute the up direction
       auto up2 = right.cross(forward).normalized();
       // compute the rotation matrix
-      Matrix3d m = {right, up2, -forward};
+      Matrix3d m = {-forward, right, up2};
       // return the quaternion
       return FromMatrix3d(m);
     }
@@ -713,6 +729,27 @@ class CatmullRomSplineManager
     computeT();
   }
 
+  // a method that returns the offset of the value to the last point in local space
+  double getOffset(double t) const {
+    int i = 0;
+    while(i < yt.size() && yt[i] < t) i++;
+    if(i + 1 >= yt.size())
+    {
+      return 1.0;
+    }
+    else
+    {
+      return (t-yt[i])/(yt[i+1]-yt[i]);
+    }
+    
+  }
+
+  // a method that returns the last index for t 
+  int getIndex(double t) const {
+    int i = 0;
+    while(i < yt.size() && yt[i] < t) i++;
+    return i;
+  }
 
   private:
 

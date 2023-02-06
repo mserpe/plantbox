@@ -239,6 +239,7 @@ public:
    * @note using a shared_ptr as parameter might be less efficient, but only O(1)
    */
     void GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
+    void GenerateRadialLeafGeometryFromPhi(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
 
     /**
      * @brief Generates the outer points of a leaf based on the spline interpolation between angles

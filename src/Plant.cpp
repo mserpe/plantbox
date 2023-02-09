@@ -4,7 +4,9 @@
 #include <memory>
 #include <iostream>
 #include <sys/stat.h>
+#ifdef __linux__
 #include <unistd.h>
+#endif
 #include <string>
 #include <fstream>
 

@@ -241,16 +241,6 @@ public:
     void GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
     void GenerateRadialLeafGeometryFromPhi(std::shared_ptr<Leaf> leaf, unsigned int p_o = 0, unsigned int c_o = 0);
 
-    /**
-     * @brief Generates the outer points of a leaf based on the spline interpolation between angles
-     * 
-     * @param leaf The leaf to generate the points for
-     * @param phi The angular values of the leaf
-     * @param resolution How many points to generate per side
-     * @return std::vector<Vector3d> 
-     */
-    std::vector<Vector3d> GenerateOuterPoints(std::shared_ptr<Leaf> leaf, std::vector<double> phi, int resolution = 20);
-
   /* Geometry buffers */
   std::vector<double> geometry; // x,y,z coordinates
   std::vector<unsigned short> geometryColors; // r,g,b,a

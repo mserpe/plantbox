@@ -5,20 +5,23 @@
 #include "growth.h"
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <cmath>
 
 namespace CPlantBox {
 
 	// an iterator that can give me the vector mirrored around 0
-	class MirrorIterator {
+	class MirrorIterator : public std::iterator<std::input_iterator_tag, std::pair<int,double> > {
 	public:
 		MirrorIterator(const std::vector<double>* v) : v(v) {
 			//std::cout << "MirrorIterator was created " << v->size() << std::endl;
-			//std::cout << "we make " << size() << " elements" << std::endl;
+			// output all vector elements
+      std::copy(v->begin(), v->end(), std::ostream_iterator<double>(std::cout, " ")); std::cout << std::endl;
 		}
 		std::pair<int,double> operator*() { return std::make_pair(idx(), v->at(i)); }
 		MirrorIterator& operator++() { inc(); return *this; }
 		bool operator!=(const MirrorIterator& other) { return i != other.i && r != other.r; }
+    bool operator==(const MirrorIterator& other) { return i == other.i && r == other.r; }
 		std::size_t size() { return (v->size() > 0) ? (v->size() * 2 - (v->back() < std::numeric_limits<float>::epsilon() ? 1 : 0)) : 0; }
 		double operator[](int i) { 
 			if(i < v->size())
@@ -263,7 +266,7 @@ void MappedSegments::addSegment(Vector2i ns, double r,  int st, int ot, int ii) 
 	int im = soil_index(mid.x,mid.y,mid.z); // cell indices
 	int in1 = soil_index(n1.x,n1.y,n1.z);
 	int in2 = soil_index(n2.x,n2.y,n2.z);
-	if ((im!=in1) or (im!=in2)) { // cut
+	if ((im!=in1) || (im!=in2)) { // cut
 		// build SDF
 		auto width = maxBound.minus(minBound); // construct sdf
 		Vector3d dx(width.x/resolution.x, width.y/resolution.y, width.z/resolution.z);
@@ -283,7 +286,7 @@ void MappedSegments::addSegment(Vector2i ns, double r,  int st, int ot, int ii) 
 		im = sdf.getDist(mid)>0; // redo indices, since accuracy of pickking may differ
 		in1 = sdf.getDist(n1)>0;
 		in2 = sdf.getDist(n2)>0;
-		if ((im!=in1) or (im!=in2)) {
+		if ((im!=in1) || (im!=in2)) {
 			Vector3d cPoint;
 			if (im==in1) { // is one node at mid (sort accordingly)
 				// std::cout << "n1 " << sdf.getDist(n1) << " mid " << sdf.getDist(mid) << " n2 " << sdf.getDist(n2) << ",indices "<< in1 << ", " << im << ", " << in2 << "\n";
@@ -397,7 +400,7 @@ int MappedSegments::soil_index_(double x, double y, double z) {
 	auto p0 = p.minus(minBound);
 	std::array<double,3> i = { p0.x/w.x*r[0], p0.y/w.y*r[1], p0.z/w.z*r[2] };
 	for (int k=0; k<3; k++) {
-		if ((i[k] < 0) or (i[k] >= r[k])) {
+		if ((i[k] < 0) || (i[k] >= r[k])) {
 			return -1; // point is out of domain
 		}
 	}
@@ -1330,15 +1333,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       continue;
     }
 		// compute the size of the current array, which is double its size unless one point is near zero which is only counted once
-		int current_size = current_amount * 2;
-		for(auto j = 0; j < current_amount; ++j)
-		{
-			// check for absolute distance to zero
-			if(std::abs(outer_geometry_points[i][j]) < std::numeric_limits<float>::epsilon())
-			{
-				current_size--;
-			}
-		}
+		int current_size = current_amount;
 		// get the current point
     double t = static_cast<double>(i) / static_cast<double>(resolution);
 		double l = t * length;
@@ -1351,15 +1346,16 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		Quaternion local_q = select_spline.computeOrientation(l);
 		auto up = local_q.Up();
     // iterate through the points
-    //std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
-    for(auto p : MirrorIterator(&current))
+    std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
+    
+    for(int p = 0; p < helper.size(); ++p)
     {
-      //std::cout << p_o << "/" << geometry.size() << " ";
+      std::cout << p_o << "/" << geometry.size() << " ";
 
-      auto r = p.second;
+      auto r = helper[p];
       // get the point
-      //std::cout << "m" << " ";
       Vector3d point = midVein(l) + local_q.Rotate(r * Vector3d(0.0, scaling_factor, 0.0));
+      std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
       geometry[p_o + 0] = point.x;
@@ -1380,6 +1376,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 			// increase buffer
 			p_o += 3;
     }
+    std::cout << std::endl;
     //std::cout << std::endl << "Generating the triangles for the current line intersection " << i << "(" << current.size() << ")" << std::endl;
     if(i > last_non_petiole && last_non_petiole >= 0)
     {
@@ -1516,10 +1513,6 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 }
 
 void MappedPlant::GenerateRadialLeafGeometryFromPhi(std::shared_ptr<Leaf> leaf, unsigned int p_o, unsigned int c_o)
-{
-}
-
-std::vector<Vector3d> MappedPlant::GenerateOuterPoints(std::shared_ptr<Leaf> leaf, std::vector<double> phi, int resolution)
 {
 }
 

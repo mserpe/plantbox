@@ -1,4 +1,7 @@
 // -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+#ifdef _WIN32 // temporary workaround to make sure that pybind11 compiles on windows
+#define _STL_CRT_SECURE_INVALID_PARAMETER(expr) _CRT_SECURE_INVALID_PARAMETER(expr)
+#endif
 #include "external/pybind11/include/pybind11/pybind11.h"
 #include "external/pybind11/include/pybind11/stl.h"
 #include <pybind11/functional.h>
@@ -969,53 +972,53 @@ PYBIND11_MODULE(plantbox, m) {
 	/*
      * Photosynthesis.h
      */
-    py::class_<Photosynthesis, XylemFlux, std::shared_ptr<Photosynthesis>>(m, "Photosynthesis")
-            .def(py::init<std::shared_ptr<CPlantBox::MappedPlant>, double, double>(),  py::arg("plant_"),  py::arg("psiXylInit") ,  py::arg("ciInit"))
-			.def("solve_photosynthesis",&Photosynthesis::solve_photosynthesis, py::arg("sim_time_")=1.0 , 
-					py::arg("sxx_") = std::vector<double>(1,-200.0)  ,
-					 py::arg("cells_") = true,py::arg("soil_k_") = std::vector<double>(), 
-					py::arg("doLog_")=false, py::arg("verbose_")=true, py::arg("RH_") = 0.5, py::arg("TairC_") = 25)
-			
-            .def_readwrite("psiXyl_old", &Photosynthesis::psiXyl_old)
-            .def_readwrite("psiXyl4Phloem", &Photosynthesis::psiXyl4Phloem)
-            .def_readwrite("limMaxErr", &Photosynthesis::limMaxErr)
-			.def_readwrite("psiXyl", &Photosynthesis::psiXyl)
-            .def_readwrite("An", &Photosynthesis::An)
-            .def_readwrite("Vc", &Photosynthesis::Vc)
-            .def_readwrite("Vj", &Photosynthesis::Vj)
-            .def_readwrite("fw", &Photosynthesis::fw)
-            .def_readwrite("ci", &Photosynthesis::ci)
-            .def_readwrite("Rd", &Photosynthesis::Rd)
-            .def_readwrite("gco2", &Photosynthesis::gco2)
-            .def_readwrite("es", &Photosynthesis::es)
-            .def_readwrite("ea", &Photosynthesis::ea)
-            .def_readwrite("Qlight", &Photosynthesis::Qlight)
-            .def_readwrite("ci", &Photosynthesis::ci)
-            .def_readwrite("Jw", &Photosynthesis::Jw)
-            .def_readwrite("Ev", &Photosynthesis::Ev)
-            .def_readwrite("plant", &Photosynthesis::plant)
-            .def_readwrite("Ag4Phloem", &Photosynthesis::Ag4Phloem)
-            .def_readwrite("minLoop", &Photosynthesis::minLoop)
-            .def_readwrite("maxLoop", &Photosynthesis::maxLoop)
-            .def_readwrite("Patm", &Photosynthesis::Patm)
-            .def_readwrite("cs", &Photosynthesis::cs)
-            .def_readwrite("TleafK", &Photosynthesis::TleafK)
-            .def_readwrite("TairC", &Photosynthesis::TairC)
-            .def_readwrite("Chl", &Photosynthesis::Chl)
-            .def_readwrite("g0", &Photosynthesis::g0)
-            .def_readwrite("theta", &Photosynthesis::theta)
-            .def_readwrite("gamma0", &Photosynthesis::gamma0)
-            .def_readwrite("gamma1", &Photosynthesis::gamma1)
-            .def_readwrite("gamma2", &Photosynthesis::gamma2)
-            .def_readwrite("alpha", &Photosynthesis::alpha)
-            .def_readwrite("a1", &Photosynthesis::a1)
-            .def_readwrite("a3", &Photosynthesis::a3)
-            .def_readwrite("VcmaxrefChl1", &Photosynthesis::VcmaxrefChl1)
-            .def_readwrite("VcmaxrefChl2", &Photosynthesis::VcmaxrefChl2)
-            .def_readwrite("outputFlux", &Photosynthesis::outputFlux)
-            .def_readwrite("outputFlux_old", &Photosynthesis::outputFlux_old)
-            .def_readwrite("k_stomatas_old", &Photosynthesis::k_stomatas_old)
-            .def_readwrite("doLog", &Photosynthesis::doLog);
+    //py::class_<Photosynthesis, XylemFlux, std::shared_ptr<Photosynthesis>>(m, "Photosynthesis")
+    //        .def(py::init<std::shared_ptr<CPlantBox::MappedPlant>, double, double>(),  py::arg("plant_"),  py::arg("psiXylInit") ,  py::arg("ciInit"))
+		//	.def("solve_photosynthesis",&Photosynthesis::solve_photosynthesis, py::arg("sim_time_")=1.0 , 
+		//			py::arg("sxx_") = std::vector<double>(1,-200.0)  ,
+		//			 py::arg("cells_") = true,py::arg("soil_k_") = std::vector<double>(), 
+		//			py::arg("doLog_")=false, py::arg("verbose_")=true, py::arg("RH_") = 0.5, py::arg("TairC_") = 25)
+		//	
+    //        .def_readwrite("psiXyl_old", &Photosynthesis::psiXyl_old)
+    //        .def_readwrite("psiXyl4Phloem", &Photosynthesis::psiXyl4Phloem)
+    //        .def_readwrite("limMaxErr", &Photosynthesis::limMaxErr)
+		//	.def_readwrite("psiXyl", &Photosynthesis::psiXyl)
+    //        .def_readwrite("An", &Photosynthesis::An)
+    //        .def_readwrite("Vc", &Photosynthesis::Vc)
+    //        .def_readwrite("Vj", &Photosynthesis::Vj)
+    //        .def_readwrite("fw", &Photosynthesis::fw)
+    //        .def_readwrite("ci", &Photosynthesis::ci)
+    //        .def_readwrite("Rd", &Photosynthesis::Rd)
+    //        .def_readwrite("gco2", &Photosynthesis::gco2)
+    //        .def_readwrite("es", &Photosynthesis::es)
+    //        .def_readwrite("ea", &Photosynthesis::ea)
+    //        .def_readwrite("Qlight", &Photosynthesis::Qlight)
+    //        .def_readwrite("ci", &Photosynthesis::ci)
+    //        .def_readwrite("Jw", &Photosynthesis::Jw)
+    //        .def_readwrite("Ev", &Photosynthesis::Ev)
+    //        .def_readwrite("plant", &Photosynthesis::plant)
+    //        .def_readwrite("Ag4Phloem", &Photosynthesis::Ag4Phloem)
+    //        .def_readwrite("minLoop", &Photosynthesis::minLoop)
+    //        .def_readwrite("maxLoop", &Photosynthesis::maxLoop)
+    //        .def_readwrite("Patm", &Photosynthesis::Patm)
+    //        .def_readwrite("cs", &Photosynthesis::cs)
+    //        .def_readwrite("TleafK", &Photosynthesis::TleafK)
+    //        .def_readwrite("TairC", &Photosynthesis::TairC)
+    //        .def_readwrite("Chl", &Photosynthesis::Chl)
+    //        .def_readwrite("g0", &Photosynthesis::g0)
+    //        .def_readwrite("theta", &Photosynthesis::theta)
+    //        .def_readwrite("gamma0", &Photosynthesis::gamma0)
+    //        .def_readwrite("gamma1", &Photosynthesis::gamma1)
+    //        .def_readwrite("gamma2", &Photosynthesis::gamma2)
+    //        .def_readwrite("alpha", &Photosynthesis::alpha)
+    //        .def_readwrite("a1", &Photosynthesis::a1)
+    //        .def_readwrite("a3", &Photosynthesis::a3)
+    //        .def_readwrite("VcmaxrefChl1", &Photosynthesis::VcmaxrefChl1)
+    //        .def_readwrite("VcmaxrefChl2", &Photosynthesis::VcmaxrefChl2)
+    //        .def_readwrite("outputFlux", &Photosynthesis::outputFlux)
+    //        .def_readwrite("outputFlux_old", &Photosynthesis::outputFlux_old)
+    //        .def_readwrite("k_stomatas_old", &Photosynthesis::k_stomatas_old)
+    //        .def_readwrite("doLog", &Photosynthesis::doLog);
 			
 	/*
      * runPM.h

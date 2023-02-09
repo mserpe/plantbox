@@ -403,7 +403,7 @@ namespace aabb
         unsigned int node = allocateNode();
 
         // AABB size in each dimension.
-        double size[dimension];
+        double* size = new double[dimension];
 
         // Compute the AABB limits.
         for (unsigned int i=0;i<dimension;i++)
@@ -439,6 +439,8 @@ namespace aabb
 
         // Store the particle index.
         nodes[node].particle = particle;
+
+        delete[] size;
     }
 
     unsigned int Tree::nParticles()
@@ -549,7 +551,7 @@ namespace aabb
         assert(nodes[node].isLeaf());
 
         // AABB size in each dimension.
-        double size[dimension];
+        double* size = new double[dimension];
 
         // Compute the AABB limits.
         for (unsigned int i=0;i<dimension;i++)
@@ -588,6 +590,7 @@ namespace aabb
 
         // Insert a new leaf node.
         insertLeaf(node);
+        delete[] size;
 
         return true;
     }

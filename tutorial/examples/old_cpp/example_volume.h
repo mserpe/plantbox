@@ -1,5 +1,6 @@
 #include "RootSystem.h"
 #include "SegmentAnalyser.h"
+#include <numeric>
 
 /**
  * Example 1

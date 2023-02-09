@@ -20,9 +20,9 @@ add_executable(${Folder}
 target_include_directories(${Folder}
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
   PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
-  ${CMAKE_CURRENT_LIST_DIR}/../src/
-
 )
 
-target_link_libraries(${Folder} PRIVATE CPlantBox)
+target_link_directories(${Folder} PUBLIC ${CMAKE_BINARY_DIR}/src/)
+message(find_path(CPlantBox))
+target_link_libraries(${Folder} PUBLIC CPlantBox)
 

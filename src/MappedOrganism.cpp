@@ -23,11 +23,13 @@ namespace CPlantBox {
 		bool operator!=(const MirrorIterator& other) { return i != other.i && r != other.r; }
     bool operator==(const MirrorIterator& other) { return i == other.i && r == other.r; }
 		std::size_t size() { return (v->size() > 0) ? (v->size() * 2 - (v->back() < std::numeric_limits<float>::epsilon() ? 1 : 0)) : 0; }
-		double operator[](int i) { 
+		double operator[](int i) {
 			if(i < v->size())
 				return v->at(i);
 			else
-				return v->at(v->size() - (i - v->size()) - (v->back() < std::numeric_limits<float>::epsilon() ? 1 : 0));
+			{
+				return v->at(v->size() - (i - v->size() + 1) - ((v->back() < std::numeric_limits<float>::epsilon()) ? 1 : 0));
+			}
 		 }
 		// begin
 		MirrorIterator begin() { return MirrorIterator(v); }
@@ -1221,12 +1223,12 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       // the indices are stored in the buffer, and are all front facing
 			if (i > 0)
 			{
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 2 + c_o] = point_index_offset + i * geometry_resolution + j;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 1 + c_o] = point_index_offset + i * geometry_resolution + (j + 1) % geometry_resolution;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 0 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 3 + c_o] = point_index_offset + i * geometry_resolution + j;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 4 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 5 + c_o] = point_index_offset + (i + 1) * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 2 + c_o] = point_index_offset +  (i-1) * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 1 + c_o] = point_index_offset +  (i-1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 0 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 3 + c_o] = point_index_offset +  (i-1) * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 4 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 5 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + j;
 			}
       // the normals are stored in the buffer
       geometryNormals[3 * (i * geometry_resolution + j) + 0 + p_o] = outer.x;

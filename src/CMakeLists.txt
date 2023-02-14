@@ -32,8 +32,21 @@ add_library(CPlantBox SHARED
 
 set_target_properties(CPlantBox PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/)
 
+# makign cmake copy the files to the debug folder
+set_target_properties(CPlantBox PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/debug_test/Debug)
+# checking if the destination is correct by a message
+message(STATUS "CMAKE_BINARY_DIR: " ${CMAKE_BINARY_DIR}/debug_test/Debug)
+# making sure with a custom command
+add_custom_command(TARGET CPlantBox POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                       $<TARGET_FILE:CPlantBox> ${CMAKE_BINARY_DIR}/debug_test/Debug)
+#adding the respective target
+add_custom_target(CPlantBox_copy ALL DEPENDS CPlantBox)
+
 target_link_libraries(CPlantBox
 						)
+
+ install(TARGETS CPlantBox CONFIGURATIONS Debug RUNTIME_DESTINATION ${CMAKE_BINARY_DIR}/debug_test/${CMAKE_BUILD_TYPE})
 
 #
 # 2. Make CPlantBox Pyhthon binding

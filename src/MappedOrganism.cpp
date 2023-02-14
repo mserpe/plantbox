@@ -1219,12 +1219,15 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       geometry[3 * (i * geometry_resolution + j) + 2 + p_o] = node.z + outer.z;
 			// calculating the point index offset from the buffer offset
       // the indices are stored in the buffer, and are all front facing
-      geometryIndices[6 * (i * geometry_resolution + j) + 0 + c_o] = point_index_offset + i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 1 + c_o] = point_index_offset + i * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 2 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 3 + c_o] = point_index_offset + i * geometry_resolution + j;
-      geometryIndices[6 * (i * geometry_resolution + j) + 4 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
-      geometryIndices[6 * (i * geometry_resolution + j) + 5 + c_o] = point_index_offset + (i + 1) * geometry_resolution + j;
+			if (i > 0)
+			{
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 2 + c_o] = point_index_offset + i * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 1 + c_o] = point_index_offset + i * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 0 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 3 + c_o] = point_index_offset + i * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 4 + c_o] = point_index_offset + (i + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 5 + c_o] = point_index_offset + (i + 1) * geometry_resolution + j;
+			}
       // the normals are stored in the buffer
       geometryNormals[3 * (i * geometry_resolution + j) + 0 + p_o] = outer.x;
       geometryNormals[3 * (i * geometry_resolution + j) + 1 + p_o] = outer.y;

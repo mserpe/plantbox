@@ -22,7 +22,6 @@ target_include_directories(${Folder}
   PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_link_directories(${Folder} PUBLIC ${CMAKE_BINARY_DIR}/src/)
-message(find_path(CPlantBox))
-target_link_libraries(${Folder} PUBLIC CPlantBox)
+target_link_directories(${Folder} PUBLIC ${CMAKE_BINARY_DIR}/src/${CMAKE_BUILD_TYPE}/)
 
+target_link_libraries(${Folder} PUBLIC CPlantBox)

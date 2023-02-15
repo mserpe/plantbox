@@ -4,7 +4,15 @@ sys.path.append("../../..")
 sys.path.append("../../../build")
 sys.path.append("../../../src/python_modules")
 import numpy as np;
+import subprocess;
 
+import os
+cwd = os.getcwd()
+print("We are in ", cwd)
+# switch to the directory where the plantbox library is located
+os.chdir("../../../build")
+subprocess.call("make -j8", shell=True)
+os.chdir(cwd)
 import plantbox as pb
 import vtk_plot as vp
 from vtk.util.numpy_support import *
@@ -63,7 +71,9 @@ print("Created Polydata")
 pd = vtk.vtkPolyData()
 print("Created Points")
 points = vtk.vtkPoints()
+plant.SetComputeMidlineInLeaf(True)
 print("Computing Geometry")
+#plant.ComputeGeometryForOrganType(pb.leaf)
 plant.ComputeGeometry()
 print("Extracting Data")
 geom = np.array(plant.GetGeometry())
@@ -81,12 +91,14 @@ pd.GetPointData().AddArray(nodeids)
 
 texcoords = np.array(plant.GetGeometryTextureCoordinates())
 print(texcoords.shape)
+texcoords = np.reshape(texcoords, (texcoords.shape[0]//2, 2))
 texcoords = numpy_to_vtk(texcoords, deep=True)
 texcoords.SetName("texcoords")
 pd.GetPointData().AddArray(texcoords)
 
 normals = np.array(plant.GetGeometryNormals())
 print(normals.shape)
+normals = np.reshape(normals, (normals.shape[0]//3, 3))
 normals = numpy_to_vtk(normals, deep=True)
 normals.SetName("normals")
 pd.GetPointData().AddArray(normals)

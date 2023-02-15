@@ -669,10 +669,10 @@ class CatmullRomSpline
   }
 
   private:
-  // the control points of the spline
-  Vector3d y0, y1, y2, y3;
   // start and end time of the spline
   double t0, t1;
+  // the control points of the spline
+  Vector3d y0, y1, y2, y3;
 };
 
 /**
@@ -698,8 +698,8 @@ class CatmullRomSplineManager
     int index = 0;
     for(int i = 0; i < splines.size(); i++)
     {
-      double d = std::abs(splines[i].getT0() - t) + std::abs(splines[i].getT1() - t);
-      if(d < min)
+      double d = ((splines[i].getT0() - t)*(splines[i].getT0() - t)) + ((splines[i].getT1() - t)*(splines[i].getT1() - t));
+      if(d < min && t > splines[i].getT0() && t < splines[i].getT1())
       {
         min = d;
         index = i;
@@ -770,11 +770,15 @@ class CatmullRomSplineManager
     {
       splines.push_back(CatmullRomSpline({y[i], y[i+1], y[i+2], y[i+3]}, yt[i], yt[i+3]));
     }
+    this->t0 = splines[0].getT0();
+    this->t1 = splines.back().getT1();
   }
 
   std::vector<Vector3d> y; // control points
   std::vector<double> yt; // t values
   std::vector<CatmullRomSpline> splines;
+  float t0 = -1.0;
+  float t1 = -1.0;
 };
 
 } // end namespace CPlantBox

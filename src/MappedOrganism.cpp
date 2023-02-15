@@ -28,13 +28,20 @@ namespace CPlantBox {
 				return v->at(i);
 			else
 			{
-				return v->at(v->size() - (i - v->size() + 1) - ((v->back() < std::numeric_limits<float>::epsilon()) ? 1 : 0));
+				return -v->at(v->size() - (i - v->size() + 1) - ((v->back() < std::numeric_limits<float>::epsilon()) ? 1 : 0));
 			}
 		 }
 		// begin
 		MirrorIterator begin() { return MirrorIterator(v); }
 		// end
 		MirrorIterator end() { return MirrorIterator(v, true, 0); }
+
+    // computes the texture coordinate within the unit interval based on the index
+    double texcoord(int i)
+		{
+		  double d = static_cast<double>(i) / static_cast<double>(size() - 1);
+			return d;
+		}
 		void inc()
 		{
 			if(r)
@@ -1180,6 +1187,11 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
 
 void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
 {
+  // if the stem is a leaf and we don't want to include the midline of the leaf, we skip it
+  if(stem->organType() == Organism::ot_leaf && !bIncludeMidlineInLeaf)
+  {
+    return;
+  }
   //std::cout << "Generating Stem for " << stem->getId() << " and reserving buffers" << std::endl;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()),-1.0);
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()),-1.0);
@@ -1223,9 +1235,9 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       // the indices are stored in the buffer, and are all front facing
 			if (i > 0)
 			{
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 2 + c_o] = point_index_offset +  (i-1) * geometry_resolution + j;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 2 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + (j + 1) % geometry_resolution;
 				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 1 + c_o] = point_index_offset +  (i-1) * geometry_resolution + (j + 1) % geometry_resolution;
-				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 0 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + (j + 1) % geometry_resolution;
+				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 0 + c_o] = point_index_offset +  (i-1) * geometry_resolution + j;
 				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 3 + c_o] = point_index_offset +  (i-1) * geometry_resolution + j;
 				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 4 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + (j + 1) % geometry_resolution;
 				geometryIndices[6 * ((i-1) * geometry_resolution + j) + 5 + c_o] = point_index_offset + ((i-1) + 1) * geometry_resolution + j;
@@ -1238,7 +1250,7 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
       geometryNodeIds[i * geometry_resolution + j + point_index_offset] = stem->getNodeId(i);
 
       geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 0 + point_index_offset*2] = i / (double)stem->getNumberOfNodes();
-      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + point_index_offset*2] = phi / (2 * M_PI);
+      geometryTextureCoordinates[2 * (i * geometry_resolution + j) + 1 + point_index_offset*2] = phi / (2.0 * M_PI);
     }
   }
 }
@@ -1276,11 +1288,13 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
   int index_buffer = 0;
   int last_amount = -1;
   int last_non_petiole = -1;
+  double r_max = std::numeric_limits<float>::lowest();
   std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
   for (auto i = 0; i < outer_geometry_points.size(); ++i)
   {
 		MirrorIterator helper(&(outer_geometry_points[i]));
 		auto current_amount = helper.size();
+		r_max = std::max(r_max, *std::max_element(outer_geometry_points[i].begin(), outer_geometry_points[i].end()));
     if(current_amount < 2)
     {
       //std::cout << "Skipping petiole at " << i << " because it has size " << current_amount << std::endl;
@@ -1345,10 +1359,10 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
     auto midpoint = midVein(t);
     // get the current point
 		// get the best spline for the current point
-		auto select_spline = midVein.selectSpline(l);
+		auto select_spline = midVein.selectSpline(t);
     // input points, normaly, ids, texture coordinates
     // iterate through the points
-		Quaternion local_q = select_spline.computeOrientation(l);
+		Quaternion local_q = select_spline.computeOrientation(t);
 		auto up = local_q.Up();
     // iterate through the points
     std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
@@ -1359,7 +1373,8 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 
       auto r = helper[p];
       // get the point
-      Vector3d point = midVein(l) + local_q.Rotate(r * Vector3d(0.0, scaling_factor, 0.0));
+			Vector3d updated_direction = local_q.Rotate(r * Vector3d(0.0, 1.0, 0.0));
+      Vector3d point = midVein(t) + updated_direction; // * scaling_factor;
       std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
@@ -1374,7 +1389,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       // set the texture coordinates
       //std::cout << "t" << " ";
       geometryTextureCoordinates[(p_o/3*2)] = t;
-      geometryTextureCoordinates[(p_o/3*2) + 0] = r;
+      geometryTextureCoordinates[(p_o/3*2) + 1] = helper.texcoord(p);
 			// set the node id
       //std::cout << "i" << " ";
 			geometryNodeIds[p_o/3] = 1;
@@ -1394,9 +1409,9 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
         for(auto j = 0; j < current_amount - 1; j += 2)
         {
 					// first triangle
-					geometryIndices[c_o++] = (p_o/3) - current_amount + j;
-					geometryIndices[c_o++] = (p_o/3) - current_amount + j + 1;
 					geometryIndices[c_o++] = (p_o/3) - current_amount + j - last_amount;
+					geometryIndices[c_o++] = (p_o/3) - current_amount + j + 1;
+					geometryIndices[c_o++] = (p_o/3) - current_amount + j;
 					// second triangle
 					geometryIndices[c_o++] = (p_o/3) - current_amount + j - last_amount;
 					geometryIndices[c_o++] = (p_o/3) - current_amount + j - last_amount + 1;

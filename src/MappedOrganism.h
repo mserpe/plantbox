@@ -148,6 +148,7 @@ public:
   void SetGeometryResolution(int resolution) { this->geometry_resolution = resolution; } // set the resolution of the geometry (number of cells in each direction
   void SetLeafGeometrizationType(LeafGeometrizationType type) { this->LeafType = type; }
   void SetLeafResolution(int resolution) { this->leaf_resolution = resolution;}
+  void SetComputeMidlineInLeaf(bool inCompute) { this->bIncludeMidlineInLeaf = inCompute; }
 
   // which leaf geomtrization to use
   LeafGeometrizationType LeafType = LeafGeometrizationType::BuiltIn; // default
@@ -209,6 +210,7 @@ public:
   std::vector<int> GetGeometryNodeIds() { return geometryNodeIds; }
 
  protected:
+  bool bIncludeMidlineInLeaf = true;
 	void initialize_(bool verbose = true, bool stochastic = true, bool LB = true);
   
   /**

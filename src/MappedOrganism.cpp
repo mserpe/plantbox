@@ -58,6 +58,11 @@ namespace CPlantBox {
 				}
 			}
 		}
+		// checks whether we are in the mirrored part for a given index
+		bool isMirrored(int i)
+		{
+		  return i >= v->size();
+    }
 		int idx()
 		{
 			if(r)
@@ -1214,7 +1219,7 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
     }
     else
     {
-      dist = stem->getNode(i - 1) - node;
+      dist = node - stem->getNode(i - 1);
     }
     
 		lastRotation = Quaternion::FromForwardAndUp(dist, lastRotation.Up());
@@ -1375,6 +1380,8 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       // get the point
 			Vector3d updated_direction = local_q.Rotate(r * Vector3d(0.0, 1.0, 0.0));
       Vector3d point = midVein(t) + updated_direction; // * scaling_factor;
+			// get the wave effect
+			float z_offset = std::sin((point.x / r_max) * 2.0 * M_PI) * std::sin((point.y / r_max) * 2.0 * M_PI) * 0.1;
       std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";

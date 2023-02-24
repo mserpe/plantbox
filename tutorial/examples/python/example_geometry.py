@@ -6,13 +6,17 @@ sys.path.append("../../../src/python_modules")
 import numpy as np;
 import subprocess;
 
-import os
-cwd = os.getcwd()
-print("We are in ", cwd)
-# switch to the directory where the plantbox library is located
-os.chdir("../../../build")
-subprocess.call("make -j8", shell=True)
-os.chdir(cwd)
+new_build = True
+
+if new_build :
+  import os
+  cwd = os.getcwd()
+  print("We are in ", cwd)
+  # switch to the directory where the plantbox library is located
+  os.chdir("../../../build")
+  subprocess.call("make -j8", shell=True)
+  os.chdir(cwd)
+
 import plantbox as pb
 import vtk_plot as vp
 from vtk.util.numpy_support import *
@@ -23,8 +27,8 @@ plant = pb.MappedPlant()
 path = "./results/"
 
 plant.readParameters(path + "P0_plant.xml")
-time = 28
-leaf_res = 20
+time = 10
+leaf_res = 30
 
 for p in plant.getOrganRandomParameter(pb.leaf):
   p.lb =  0 # length of leaf stem
@@ -71,7 +75,7 @@ print("Created Polydata")
 pd = vtk.vtkPolyData()
 print("Created Points")
 points = vtk.vtkPoints()
-plant.SetComputeMidlineInLeaf(True)
+plant.SetComputeMidlineInLeaf(False)
 print("Computing Geometry")
 #plant.ComputeGeometryForOrganType(pb.leaf)
 plant.ComputeGeometry()
@@ -134,7 +138,7 @@ print("test")
 
 print(pd.GetPoints())
 writer = vtk.vtkXMLPolyDataWriter()
-writer.SetFileName("test_geom.vtp")
+writer.SetFileName("test_geom_10.vtp")
 writer.SetDataModeToAscii()
 writer.SetInputData(pd)
 writer.Write()

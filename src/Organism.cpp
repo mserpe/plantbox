@@ -102,6 +102,7 @@ std::shared_ptr<OrganRandomParameter> Organism::getOrganRandomParameter(int ot, 
         //                std::cout << "\n" << std::flush;
         return organParam[ot].at(subType);
     } catch(...) { // const std::out_of_range& oor
+      std::cout << "Organism::getOrganRandomParameter: unknown organ type " << Organism::organTypeName(ot) << " sub type " << subType << std::endl;
         throw std::invalid_argument("Organism::getOrganTypeParameter: OrganRandomParameter for "+ Organism::organTypeName(ot) + ", of sub type " +
             std::to_string(subType) + " was not set");
     }

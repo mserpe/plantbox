@@ -7,7 +7,6 @@ import plantbox as pb
 
 
 class TestLeafParameter(unittest.TestCase):
-
     def leaf_example(self):
         self.plant = pb.Organism()
         self.lrp = pb.LeafRandomParameter(self.plant)

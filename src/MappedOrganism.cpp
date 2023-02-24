@@ -7,6 +7,7 @@
 #include <functional>
 #include <iterator>
 #include <cmath>
+#include "mymath.h"
 
 namespace CPlantBox {
 
@@ -1346,6 +1347,12 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 	Quaternion last_orientation;
 	Vector3d last_position;
 	int last_index{-1};
+  // create two random factors between 0 and 1
+  float random_factor_1 = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+  float random_factor_2 = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+
+
+
 	for(auto i = 0; i < outer_geometry_points.size(); ++i)
 	{
     const std::vector<double>& current = outer_geometry_points[i];
@@ -1371,6 +1378,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		auto up = local_q.Up();
     // iterate through the points
     std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
+		
     
     for(int p = 0; p < helper.size(); ++p)
     {
@@ -1378,10 +1386,20 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 
       auto r = helper[p];
       // get the point
+			// get the wave effect which is a sine function along the length of the leaf
+
+			float z_offset =  0.33 * (helper.isMirrored(p) ? -1.0 : 1.0);
+			// make two different sine waves for each side
+			if(helper.isMirrored(p))
+			{
+			         z_offset *= std::sin((2.0*random_factor_1 + 2.0) * l / M_PI);
+      }
+      else
+      {
+               z_offset *= std::sin((2.0 * random_factor_2 + 2.0) * l / M_PI + M_PI);
+      }
 			Vector3d updated_direction = local_q.Rotate(r * Vector3d(0.0, 1.0, 0.0));
-      Vector3d point = midVein(t) + updated_direction; // * scaling_factor;
-			// get the wave effect
-			float z_offset = std::sin((point.x / r_max) * 2.0 * M_PI) * std::sin((point.y / r_max) * 2.0 * M_PI) * 0.1;
+      Vector3d point = midVein(t) + updated_direction + up * z_offset; // * scaling_factor;
       std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
@@ -1395,7 +1413,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       geometryNormals[p_o + 2] = up.z;
       // set the texture coordinates
       //std::cout << "t" << " ";
-      geometryTextureCoordinates[(p_o/3*2)] = t;
+      geometryTextureCoordinates[(p_o/3*2)] = l;
       geometryTextureCoordinates[(p_o/3*2) + 1] = helper.texcoord(p);
 			// set the node id
       //std::cout << "i" << " ";

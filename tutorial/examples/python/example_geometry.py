@@ -27,6 +27,7 @@ plant = pb.MappedPlant()
 path = "./results/"
 
 plant.readParameters(path + "P0_plant.xml")
+
 time = 10
 leaf_res = 30
 
@@ -64,8 +65,6 @@ if next((o for o in organs if o.getNumberOfNodes() <= 1), False) :
 else :
   print("This plant has no organ without nodes")
 
-#plot cpb plant
-plant.write("test.vtp")
 
 print("test")
 
@@ -138,7 +137,7 @@ print("test")
 
 print(pd.GetPoints())
 writer = vtk.vtkXMLPolyDataWriter()
-writer.SetFileName("test_geom_10.vtp")
+writer.SetFileName("test_geom_" + str(time) + ".vtp")
 writer.SetDataModeToAscii()
 writer.SetInputData(pd)
 writer.Write()

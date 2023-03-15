@@ -1105,7 +1105,7 @@ void MappedPlant::MapPropertyToColors(std::string property, std::vector<double> 
 void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int petiole_zone, unsigned int p_o, unsigned int c_o)
 {
   // std::vector::reserve should be idempotent.
-  std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
+  //std::cout << "Resizing geometry buffers for a leaf with n=" << leaf->getNumberOfNodes() << ", pet=" << petiole_zone << std::endl;
 	int first_surface_id = petiole_zone + 1;
 	int total_points = leaf->getNumberOfNodes() - first_surface_id;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + total_points * 4 * 3), geometry.size()), -1.0);
@@ -1213,6 +1213,18 @@ void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int
   {
     double diameter = stem->getParameter("radius");
     const auto& node = stem->getNode(i);
+
+		// if the current i is in the last 10% of the nodes
+		if(static_cast<float>(i)/static_cast<float>(stem->getNumberOfNodes()) > 0.9f)
+		{
+		  // reduce the diameter to form a tip
+			diameter *= (1.0 - ((static_cast<float>(i)/static_cast<float>(stem->getNumberOfNodes()) - 0.9f) * 10.0f));
+		}
+		if(i == stem->getNumberOfNodes() - 1)
+		{
+			diameter = 0.01;
+		}
+
     Vector3d dist;
     if(i + 1 < stem->getNumberOfNodes())
     {
@@ -1277,6 +1289,8 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
   // std::cout << "Accessing leaf random parameter for leaf " << leaf->getId() << std::endl;
 	// get leaf random parameter
 	auto lrp = leaf->getLeafRandomParameter();
+	auto stem = leaf->getParent();
+	auto min_radius = stem->getParameter("radius");
 
   // std::cout << "Invoking create leaf radial geometry for leaf " << leaf->getId() << std::endl;
 
@@ -1368,21 +1382,29 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		// get the current point
     double t = static_cast<double>(i) / static_cast<double>(resolution);
 		double l = t * length;
-    auto midpoint = midVein(t);
+    auto midpoint = (i == 0) ? leaf->getNode(0) : midVein(t);
     // get the current point
 		// get the best spline for the current point
 		auto select_spline = midVein.selectSpline(t);
-    // input points, normaly, ids, texture coordinates
+		//auto lowest_possible_spline = std::find(midVein.getSplines().begin(), midVein.getSplines().end(), [l](auto spline) {return spline.getT0() < l; });
+		
+	  // input points, normaly, ids, texture coordinates
     // iterate through the points
 		Quaternion local_q = select_spline.computeOrientation(t);
 		auto up = local_q.Up();
     // iterate through the points
-    std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
-		
+    //std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
+
+		float petiole_distance = leaf->getLeafRandomParameter()->lb;
+
+		const Vector3d first_node = leaf->getNode(0);
+		const Vector3d first_estimated = midVein(0);
+		const auto first_distance = (first_node - first_estimated).length();
+		std::cout << "First distance is " << first_distance << std::endl;
     
     for(int p = 0; p < helper.size(); ++p)
     {
-      std::cout << p_o << "/" << geometry.size() << " ";
+      //std::cout << p_o << "/" << geometry.size() << " ";
 
       auto r = helper[p];
       // get the point
@@ -1392,15 +1414,18 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 			// make two different sine waves for each side
 			if(helper.isMirrored(p))
 			{
-			         z_offset *= std::sin((2.0*random_factor_1 + 2.0) * l / M_PI);
+			  z_offset *= std::sin((2.0*random_factor_1 + 2.0) * l / M_PI);
       }
       else
       {
-               z_offset *= std::sin((2.0 * random_factor_2 + 2.0) * l / M_PI + M_PI);
+        z_offset *= std::sin((2.0 * random_factor_2 + 2.0) * l / M_PI + M_PI);
       }
-			Vector3d updated_direction = local_q.Rotate(r * Vector3d(0.0, 1.0, 0.0));
-      Vector3d point = midVein(t) + updated_direction + up * z_offset; // * scaling_factor;
-      std::cout << "V: " << point.toString() << "; ";
+			const Vector3d base_direction = r * Vector3d(0.0, 1.0, 0.0);
+			//std::cout << base_direction.toString() << std::endl;
+			Vector3d updated_direction = local_q.Rotate(base_direction);
+			updated_direction = (updated_direction.length() > min_radius) ? updated_direction : min_radius * updated_direction.normalized();
+			const Vector3d point = midpoint + updated_direction + up * z_offset;
+      //std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
       geometry[p_o + 0] = point.x;

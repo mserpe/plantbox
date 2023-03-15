@@ -285,6 +285,7 @@ class Quaternion {
 
     Quaternion operator*(const Quaternion& q) const {
       return Quaternion(w * q.w - v.times(q.v), q.v.times(w) + v.times(q.w) + v.cross(q.v));
+      //return Quaternion(1.0, q.v.times(w) + v.times(q.w) + v.cross(q.v));
     }
 
     std::string toString() const {
@@ -416,7 +417,8 @@ class Quaternion {
     Vector3d Rotate(const Vector3d& v) const {
       Quaternion standin = *this;
       standin.w = 1.0;
-      return (standin * Quaternion(0, v) * standin.conjugate()).v;
+      auto result = (standin * Quaternion(0, v) * standin.conjugate()).v;
+      return result / result.length() * v.length();
     }
 
     /**
@@ -698,7 +700,7 @@ class CatmullRomSplineManager
     int index = 0;
     for(int i = 0; i < splines.size(); i++)
     {
-      double d = ((splines[i].getT0() - t)*(splines[i].getT0() - t)) + ((splines[i].getT1() - t)*(splines[i].getT1() - t));
+      double d = std::abs((splines[i].getT0() - t) - (splines[i].getT1() - t));
       if(d < min && t > splines[i].getT0() && t < splines[i].getT1())
       {
         min = d;
@@ -706,6 +708,11 @@ class CatmullRomSplineManager
       }
     }
     return splines[index];
+  }
+
+  const std::vector<CatmullRomSpline> &getSplines() const
+  {
+    return splines;
   }
 
   Vector3d operator() (double t) const {

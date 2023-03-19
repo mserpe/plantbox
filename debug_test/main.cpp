@@ -28,25 +28,25 @@ int main()
     leaf->createLeafRadialGeometry(leaf->leafGeometryPhi, leaf->leafGeometryX, leaf_resolution);
   }
 
-  for(auto p : plant->getOrganRandomParameter(CPlantBox::Organism::ot_stem))
-  {
-    auto stem = std::dynamic_pointer_cast<CPlantBox::StemRandomParameter>(p);
-    auto r = 0.758517633;
-    stem->r = r;
-    stem->lmax = static_cast<double>(time - 7) * r;
-  }
-  for (auto p : plant->getOrganRandomParameter(CPlantBox::Organism::ot_root))
-  {
-    auto root = std::dynamic_pointer_cast<CPlantBox::RootRandomParameter>(p);
-    auto r = 0.758517633;
-    root->r = r;
-    root->lmax = static_cast<double>(time - 7) * r;
-  }
+  //for(auto p : plant->getOrganRandomParameter(CPlantBox::Organism::ot_stem))
+  //{
+  //  auto stem = std::dynamic_pointer_cast<CPlantBox::StemRandomParameter>(p);
+  //  auto r = 0.758517633;
+  //  stem->r = r;
+  //  stem->lmax = static_cast<double>(time - 7) * r;
+  //}
+  //for (auto p : plant->getOrganRandomParameter(CPlantBox::Organism::ot_root))
+  //{
+  //  auto root = std::dynamic_pointer_cast<CPlantBox::RootRandomParameter>(p);
+  //  auto r = 0.758517633;
+  //  root->r = r;
+  //  root->lmax = static_cast<double>(time - 7) * r;
+  //}
 
   plant->initialize();
   plant->simulate(time, true);
   std::cout << "Computing Geometry" << std::endl;
-  plant->ComputeGeometry();
+  plant->ComputeGeometryForOrganType(CPlantBox::Organism::ot_leaf);
   auto points = plant->GetGeometry();
 
   std::cout << "Generated points are "  << points.size() << std::endl;

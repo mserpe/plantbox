@@ -14,7 +14,7 @@ if new_build :
   print("We are in ", cwd)
   # switch to the directory where the plantbox library is located
   os.chdir("../../../build")
-  subprocess.call("make -j8", shell=True)
+  subprocess.call("make -j8 plantbox", shell=True)
   os.chdir(cwd)
 
 import plantbox as pb
@@ -28,7 +28,7 @@ path = "./results/"
 
 plant.readParameters(path + "P0_plant.xml")
 
-time = 10
+time = 28
 leaf_res = 30
 
 for p in plant.getOrganRandomParameter(pb.leaf):
@@ -66,85 +66,88 @@ else :
   print("This plant has no organ without nodes")
 
 
-print("test")
+for organ_type in [2,3,4] :
+  print("Created the plant")
+  print("Created Polydata")
+  pd = vtk.vtkPolyData()
+  # clear the data
+  pd.Reset()
+  print("Created Points")
+  points = vtk.vtkPoints()
+  # clear the points
+  points.Reset()
+  print("Computing Geometry")
+  #plant.ComputeGeometryForOrganType(pb.leaf)
+  #plant.ComputeGeometry()
+  print("Extracting Data")
+  plant.SetComputeMidlineInLeaf(organ_type != 4)
+  print("Extracting Data from ", organ_type)
+  plant.ComputeGeometryForOrganType(organ_type)
+  geom = np.array(plant.GetGeometry())
+  print(geom.shape)
 
-print("Created the plant")
+  print("Extracted Data")
 
-print("Created Polydata")
-pd = vtk.vtkPolyData()
-print("Created Points")
-points = vtk.vtkPoints()
-plant.SetComputeMidlineInLeaf(False)
-print("Computing Geometry")
-#plant.ComputeGeometryForOrganType(pb.leaf)
-plant.ComputeGeometry()
-print("Extracting Data")
-geom = np.array(plant.GetGeometry())
-print(geom.shape)
+  print("Creating VTK Data from node ids")
+  nodeids = np.array(plant.GetGeometryNodeIds())
+  print(nodeids.shape)
+  nodeids = numpy_to_vtk(nodeids, deep=True)
+  nodeids.SetName("nodeids")
+  print("Adding VTK Data to Polydata")
+  pd.GetPointData().AddArray(nodeids)
 
-print("Extracted Data")
+  texcoords = np.array(plant.GetGeometryTextureCoordinates())
+  print(texcoords.shape)
+  texcoords = np.reshape(texcoords, (texcoords.shape[0]//2, 2))
+  texcoords = numpy_to_vtk(texcoords, deep=True)
+  texcoords.SetName("texcoords")
+  pd.GetPointData().AddArray(texcoords)
 
-print("Creating VTK Data from node ids")
-nodeids = np.array(plant.GetGeometryNodeIds())
-print(nodeids.shape)
-nodeids = numpy_to_vtk(nodeids, deep=True)
-nodeids.SetName("nodeids")
-print("Adding VTK Data to Polydata")
-pd.GetPointData().AddArray(nodeids)
+  normals = np.array(plant.GetGeometryNormals())
+  print(normals.shape)
+  normals = np.reshape(normals, (normals.shape[0]//3, 3))
+  normals = numpy_to_vtk(normals, deep=True)
+  normals.SetName("normals")
+  pd.GetPointData().AddArray(normals)
 
-texcoords = np.array(plant.GetGeometryTextureCoordinates())
-print(texcoords.shape)
-texcoords = np.reshape(texcoords, (texcoords.shape[0]//2, 2))
-texcoords = numpy_to_vtk(texcoords, deep=True)
-texcoords.SetName("texcoords")
-pd.GetPointData().AddArray(texcoords)
+  print("Iterating through points to create points form geometry")
+  points = vtk.vtkPoints()
+  print("Created point array")
+  print(geom.shape[0]//3, " points")
+  points.SetNumberOfPoints(geom.shape[0]//3)
+  print("Setting ", geom.shape[0]//3, " points")
+  for i in range(geom.shape[0]//3) :
+    points.SetPoint(i, geom[i*3], geom[i*3+1], geom[i*3+2])
 
-normals = np.array(plant.GetGeometryNormals())
-print(normals.shape)
-normals = np.reshape(normals, (normals.shape[0]//3, 3))
-normals = numpy_to_vtk(normals, deep=True)
-normals.SetName("normals")
-pd.GetPointData().AddArray(normals)
+  print("Getting the cells from the vis")
+  cell_data = np.array(plant.GetGeometryIndices())
+  cell_data = np.reshape(cell_data, (cell_data.shape[0]//3, 3))
 
-print("Iterating through points to create points form geometry")
-points = vtk.vtkPoints()
-print("Created point array")
-print(geom.shape[0]//3, " points")
-points.SetNumberOfPoints(geom.shape[0]//3)
-print("Setting ", geom.shape[0]//3, " points")
-for i in range(geom.shape[0]//3) :
-  points.SetPoint(i, geom[i*3], geom[i*3+1], geom[i*3+2])
+  print("doing the same with the cells")
+  cells = vtk.vtkCellArray()
+  for i in range(cell_data.shape[0]) :
+    cells.InsertNextCell(3)
+    cells.InsertCellPoint(cell_data[i, 0])
+    cells.InsertCellPoint(cell_data[i, 1])
+    cells.InsertCellPoint(cell_data[i, 2])
 
-print("Getting the cells from the vis")
-cell_data = np.array(plant.GetGeometryIndices())
-cell_data = np.reshape(cell_data, (cell_data.shape[0]//3, 3))
+  print("Adding points and cells to polydata")
+  pd.SetPoints(points)
+  pd.SetPolys(cells)
 
-print("doing the same with the cells")
-cells = vtk.vtkCellArray()
-for i in range(cell_data.shape[0]) :
-  cells.InsertNextCell(3)
-  cells.InsertCellPoint(cell_data[i, 0])
-  cells.InsertCellPoint(cell_data[i, 1])
-  cells.InsertCellPoint(cell_data[i, 2])
+  print("Extracted the Plant")
 
-print("Adding points and cells to polydata")
-pd.SetPoints(points)
-pd.SetPolys(cells)
+  print("test")
 
-print("Extracted the Plant")
+  print(pd.GetPoints())
+  writer = vtk.vtkXMLPolyDataWriter()
+  writer.SetFileName("test_geom_" + str(time) + "_" + str(organ_type) + ".vtp")
+  writer.SetDataModeToAscii()
+  writer.SetInputData(pd)
+  writer.Write()
 
-print("test")
-
-print(pd.GetPoints())
-writer = vtk.vtkXMLPolyDataWriter()
-writer.SetFileName("test_geom_" + str(time) + ".vtp")
-writer.SetDataModeToAscii()
-writer.SetInputData(pd)
-writer.Write()
-
-print("Written the Plant")
-
-print("Sanity check")
-print(pd.GetNumberOfPoints(), " points and ", pd.GetNumberOfCells(), " cells")
-print("Maximum cell id: ", cell_data.max())
-print("Minimum cell id: ", cell_data.min())
+  print("Written the Plant")
+  print("Sanity check")
+  print(pd.GetNumberOfPoints(), " points and ", pd.GetNumberOfCells(), " cells")
+  print("Maximum cell id: ", cell_data.max())
+  print("Minimum cell id: ", cell_data.min())

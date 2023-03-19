@@ -979,7 +979,8 @@ void MappedPlant::ComputeGeometryForOrgan(int organId)
 
 void MappedPlant::ComputeGeometryForOrganType(int organType)
 {
-  auto organ_list = this->getOrgans(organType, false);
+  auto organ_list = this->getOrgans(-1, false);
+		
   // First we check if we have enough memory to support the geometry
   unsigned int point_space = 0;
   unsigned int cell_space = 0;
@@ -993,9 +994,12 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 			if(organ->organType() == 4)
 			{
 				// 4 SHOULD mean leaf, so we do not check for successful cast
-				point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-				cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
-				point_space += (organ->getNumberOfNodes()) * 4 * 3;
+				if(bIncludeMidlineInLeaf)
+				{
+				  point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+				  cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
+				}
+			  point_space += (organ->getNumberOfNodes()) * 4 * 3;
 				cell_space += ((organ->getNumberOfNodes()) - 1) * 4 * 3 + 40;
 			}
 			else
@@ -1006,6 +1010,12 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 		}
   }
   //std::cout << "Going to allocate " << point_space << " points and " << cell_space << " cells" << std::endl;
+  geometry.clear();
+  geometryNormals.clear();
+  geometryColors.clear();
+  geometryIndices.clear();
+  geometryTextureCoordinates.clear();
+  geometryNodeIds.clear();
   geometry.reserve(point_space);
   geometryNormals.reserve(point_space);
   geometryColors.reserve(point_space / 3 * 2);
@@ -1022,7 +1032,7 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
     checked_organs++;
 		//std::cout << "Going through organ " << organ->getId() << std::endl;
 
-    if((organType >= 0 && organ->organType() != organType) || organ->getNumberOfNodes() <= 1)
+    if((organType >= 1 && organ->organType() != organType) || organ->getNumberOfNodes() <= 1)
     {
       continue;
     }
@@ -1032,7 +1042,10 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 			// render petiole
       //std::cout << "Generating geometry for leaf " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
       //std::cout << "Stem part for petiole and rest" << std::endl;
-      GenerateStemGeometry(organ, point_space, cell_space);
+			if(bIncludeMidlineInLeaf)
+			{
+        GenerateStemGeometry(organ, point_space, cell_space);
+			}
       //std::cout << "Updating buffer positions because the leaf is a two-parter" << std::endl;
       //point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
       //cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
@@ -1190,14 +1203,8 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
       //std::cout << "Done" << std::endl;
 }
 
-
 void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
 {
-  // if the stem is a leaf and we don't want to include the midline of the leaf, we skip it
-  if(stem->organType() == Organism::ot_leaf && !bIncludeMidlineInLeaf)
-  {
-    return;
-  }
   //std::cout << "Generating Stem for " << stem->getId() << " and reserving buffers" << std::endl;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()),-1.0);
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()),-1.0);

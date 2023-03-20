@@ -41,8 +41,7 @@ for p in plant.getOrganRandomParameter(pb.leaf):
   p.tropismT = 1 # 6: Anti-gravitropism to gravitropism
   p.tropismN = 5
   p.tropismS = 0.5
-  print(p.dx)
-  p.dx = 1
+  p.r *=100
   #p.tropismAge = 5 #< age at which tropism switch occures, only used if p.tropismT = 6
   p.createLeafRadialGeometry(phi, l, leaf_res)
 

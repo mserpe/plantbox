@@ -36,6 +36,7 @@ class Organism : public std::enable_shared_from_this<Organism> {
 public:
 
     enum OrganTypes { ot_organ = 0, ot_seed = 1, ot_root = 2, ot_stem = 3, ot_leaf = 4 }; ///< coarse organ classification
+  std::vector<int> leafphytomerID = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     static std::vector<std::string> organTypeNames; ///< names of the organ types
     static int instances; ///< the number of instances of this or derived classes
 

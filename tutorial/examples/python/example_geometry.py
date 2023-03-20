@@ -32,8 +32,8 @@ time = 28
 leaf_res = 30
 
 for p in plant.getOrganRandomParameter(pb.leaf):
-  p.lb =  10 # length of leaf stem
-  p.lbs =  1 # length of leaf stem
+  p.lb =  2#0 # length of leaf stem
+  p.lbs =  0 # length of leaf stem
   p.la,  p.lmax = 38.41053981, 38.41053981
   p.areaMax = 54.45388021  # cm2, area reached when length = lmax
   phi = np.array([-90,-80, -45, 0., 45, 90]) / 180. * np.pi

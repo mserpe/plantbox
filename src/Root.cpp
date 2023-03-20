@@ -236,7 +236,6 @@ double Root::calcCreationTime(double length, double dt)
 double Root::calcLength(double age)
 {
     assert(age >= 0 && "Root::calcLength() negative root age");
-	std::cout<<" Root::calcLength "<<param()->r<<" "<<param()->getK()<<std::endl;
     return getRootRandomParameter()->f_gf->getLength(age,param()->r,param()->getK(), shared_from_this());
 }
 

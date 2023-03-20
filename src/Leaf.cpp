@@ -47,7 +47,7 @@ Leaf::Leaf(std::shared_ptr<Organism> plant, int type, Matrix3d iHeading, double 
 	addleafphytomerID(param()->subType);
 	ageDependentTropism = getLeafRandomParameter()->f_tf->ageSwitch > 0;
 	// Calculate the rotation of the leaves. The code begins here needs to be rewritten, because another following project will work on the leaves. The code here is just temporally used to get some nice visualizations. When someone rewrites the code, please take "gimbal lock" into consideration.  
-	//Rewritten Begin: 															 
+	//Rewritten Begin: 								
 	double beta = getleafphytomerID(param()->subType)*M_PI*getLeafRandomParameter()->rotBeta
 			+ M_PI*plant->rand()*getLeafRandomParameter()->betaDev ;  //+ ; //2 * M_PI*plant->rand(); // initial rotation
 	beta = beta + getLeafRandomParameter()->initBeta*M_PI;

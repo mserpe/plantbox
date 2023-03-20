@@ -72,7 +72,6 @@ public:
   std::string toString() const override;
   void writeVTP(int otype, std::ostream & os) const;
 
-  std::vector<int> leafphytomerID = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   bool	hasRelCoord() override {return relCoord;}  //is currently with relative coordinates? see @Leaf::getLength(i) or Stem::getLength(i)
   void setRelCoord(bool isrel) {relCoord = isrel;}
   void abs2rel();

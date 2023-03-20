@@ -102,7 +102,6 @@ std::shared_ptr<OrganSpecificParameter> LeafRandomParameter::realize()
     	//length of sheath or petiole => basal zone has a meaning even without lateral
 		lb_ = std::max(lb + p->randn()*lbs,double(0)); 
 		///adapt lb for wheat
-		lb_ = lb_ * this->plant.lock()->leafphytomerID.at(subType);
 		
 		double lmax_ = std::max(lmax + p->randn()*lmaxs, 0.) ; // adapt total length
 		res = lmax_-floor(lmax_ / dx)*dx;
@@ -111,9 +110,11 @@ std::shared_ptr<OrganSpecificParameter> LeafRandomParameter::realize()
 			}else{lmax_ =  floor(lmax_ / dx)*dx + dxMin;}   
 		}			//make la_ compatible with dx() and dxMin()
 		la_ = lmax_ - lb_; 
+		lb_ = lb_ * this->plant.lock()->leafphytomerID.at(subType);
+		lmax_ = la_ + lb_;
     } else {
 	lb_ = std::max(lb + p->randn()*lbs,double(0)); // length of basal zone
-		///adapt lb for wheat
+		///adapt lb for wheat, change where it is to not affect otal leaf length?
 		lb_ = lb_ * this->plant.lock()->leafphytomerID.at(subType);
 	la_ = std::max(la + p->randn()*las,double(0)); // length of apical zone
 	nob_real = std::max(round(nob() + p->randn()*nobs()), 1.); // real maximal number of branches 

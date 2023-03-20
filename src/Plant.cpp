@@ -16,7 +16,7 @@ namespace CPlantBox {
  * Constructs plant, initializes random number generator
  * @param seednum    option to set seed (for creation of random number) default = 0.
  */
-Plant::Plant(double seednum): Organism(seednum)
+Plant::Plant(int seednum): Organism(seednum)
 { }
 
 /**
@@ -241,8 +241,8 @@ void Plant::setTropism(std::shared_ptr<Tropism> tf, int organType, int subType) 
 	abs2rel();
 	relCoord = true;
     Organism::simulate(dt, verbose);	
-	rel2abs();
 	relCoord = false;
+	rel2abs();
 }
 
 /**

@@ -60,7 +60,9 @@ std::shared_ptr<OrganSpecificParameter> OrganRandomParameter::realize()
 {
     auto p = plant.lock();
     double a_ = std::max(a + p->randn()*as, 0.); // radius
-    return std::make_shared<OrganSpecificParameter>(subType, a_);
+    double lb_ = std::max(lb + p->randn()*lbs, 0.); // radius
+    double la_ = std::max(la + p->randn()*las, 0.); // radius
+    return std::make_shared<OrganSpecificParameter>(subType, a_, lb_,la_);
 }
 
 /**

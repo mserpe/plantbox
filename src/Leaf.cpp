@@ -761,10 +761,10 @@ void Leaf::rel2abs()
 		Vector3d newdx = nodes[i];
 		//if new node or has an age-dependent tropism + reached age at which tropism changes. Might need to update the conditions if do new tropism functions
 		//i.e., gradual change according to age
-		if((i>= oldNumberOfNodes )|| (this->ageDependentTropism&& tropismChange)){
+		//if((i>= oldNumberOfNodes )|| (this->ageDependentTropism&& tropismChange)){
 			double sdx = nodes[i].length();
 			newdx = getIncrement(nodes[i-1], sdx, i-1);
-		}
+		//}
 		nodes[i] = nodes[i-1].plus(newdx);
 		
 	}
@@ -810,7 +810,7 @@ Vector3d Leaf::getIncrement(const Vector3d& p, double sdx, int n)
 	Matrix3d ons = Matrix3d::ons(h);
 	//use dx() rather rhan sdx to compute heading
 	//to make tropism independante from growth rate
-	Vector2d ab = getLeafRandomParameter()->f_tf->getHeading(p, ons, dx(),shared_from_this());
+	Vector2d ab = getLeafRandomParameter()->f_tf->getHeading(p, ons, dx(),shared_from_this(), n+1);
 	Vector3d sv = ons.times(Vector3d::rotAB(ab.x,ab.y));
 	return sv.times(sdx);
 }
@@ -953,6 +953,7 @@ double Leaf::getLength(int i) const
 		}
 	}else{
 		for (int j = 0; j<i; j++) {
+			
 			l += nodes.at(j+1).minus(nodes.at(j)).length(); // relative length equals absolute length
 		}
 	}

@@ -134,7 +134,7 @@ class MappedPlant : public MappedSegments, public Plant
 public:
 
     using Plant::Plant;
-	MappedPlant(double seednum = 0): Plant(seednum){}; ///< constructor
+	MappedPlant(int seednum = 0): Plant(seednum){}; ///< constructor
 
     virtual ~MappedPlant() { }; ///< destructor
 	

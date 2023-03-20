@@ -1,4 +1,4 @@
-# Install script for directory: /home/rbtlm640/4Dirk/CPlantBox
+# Install script for directory: /home/rbtlm640/4Felix/CPlantBox
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,8 +39,9 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/rbtlm640/4Dirk/CPlantBox/src/cmake_install.cmake")
-  include("/home/rbtlm640/4Dirk/CPlantBox/tutorial/cmake_install.cmake")
+  include("/home/rbtlm640/4Felix/CPlantBox/src/cmake_install.cmake")
+  include("/home/rbtlm640/4Felix/CPlantBox/tutorial/cmake_install.cmake")
+  include("/home/rbtlm640/4Felix/CPlantBox/debug_test/cmake_install.cmake")
 
 endif()
 
@@ -52,5 +53,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/rbtlm640/4Dirk/CPlantBox/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/rbtlm640/4Felix/CPlantBox/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

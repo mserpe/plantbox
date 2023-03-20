@@ -4,7 +4,6 @@
 #include "Root.h"
 #include "Plant.h"
 #include <algorithm>
-#include <span>
 #include <vector>
 #include <numeric>
 #include <cmath>

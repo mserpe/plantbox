@@ -21,19 +21,17 @@ class LeafSpecificParameter : public OrganSpecificParameter
 {
 public:
 
-	LeafSpecificParameter() :OrganSpecificParameter(-1, 0.) { };
+	LeafSpecificParameter() :OrganSpecificParameter(-1, 0., 0., 0.) { };
 	LeafSpecificParameter(int subType, double lb, double la, 
 	const std::vector<double>& ln, double r, double a, double theta, 
 	double rlt, double leafArea, bool laterals, double Width_blade, double Width_petiole):
-		OrganSpecificParameter(subType, a) , lb(lb), la(la), r(r), 
+		OrganSpecificParameter(subType, a, lb, la) , r(r), 
 		theta(theta), rlt(rlt), areaMax(leafArea), laterals(laterals), 
 		ln(ln), Width_blade(Width_blade), Width_petiole(Width_petiole)  { }; ///< Constructor setting all parameters
 
 	/*
 	 * Parameters per leaf
 	 */
-	double lb = 0.; 		///< Basal zone of leaf (leaf-stem) [cm]
-	double la = 0.;			///< Apical zone of leaf vein [cm];
 	double r = 0.;			///< Initial growth rate [cm day-1]
 	double theta = 0.; 		///< Branching angle between veins [rad]
 	double rlt = 0.;		///< Leaf life time [day]
@@ -100,8 +98,6 @@ public:
 	double betaDev = 0.2;	///< Deviation of radial rotation (rad)
 	double initBeta = 0.2;	///< Initial radial rotation (rad)
 	int tropismT = 1;		///< Leaf tropism parameter (Type)
-	double tropismN = 1.;	///< Leaf tropism parameter (number of trials)
-	double tropismS = 0.2;	///< Leaf tropism parameter (mean value of expected changeg) [1/cm]
 	double tropismAge = 0.;	///< Leaf tropism parameter (age when switch tropism)
 	double tropismAges = 0.;///< Leaf tropism parameter (age when switch tropism, standard deviation)
 	double theta = 1.22;	///< Angle between leafvein and parent leafvein (rad)

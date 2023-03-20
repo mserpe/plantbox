@@ -28,12 +28,14 @@ class ExponentialGrowth;
 class OrganSpecificParameter {
 public:
 
-    OrganSpecificParameter(int t, double a): subType(t), a(a)  { }
+    OrganSpecificParameter(int t, double a, double lb, double la): subType(t), lb(lb), la(la) , a(a) { }
 
     virtual ~OrganSpecificParameter() { }
 
     int subType = -1; ///< sub type of the organ
-    double a = 0.; ///< radius of the organ [cm]
+    double lb = 0.; 		///< Basal zone of leaf (leaf-stem) [cm]
+	double la = 0.;			///< Apical zone of leaf vein [cm];
+	double a = 0.; ///< radius of the organ [cm]
     virtual std::string toString() const; ///< quick info for debugging
 
 };
@@ -76,7 +78,13 @@ public:
     std::string name = "organ";
     int organType = 0;
     int subType = 0;
-    double a = 0.1; 		///< Root radius [cm]
+    double tropismN = 1.;	///< Leaf tropism parameter (number of trials)
+	double tropismS = 0.2;	///< Leaf tropism parameter (mean value of expected changeg) [1/cm]
+	double lb = 0.; 	///< Basal zone [cm]
+	double lbs = 0.;  	///< Standard deviation basal zone [cm]
+	double la = 10.;	///< Apical zone [cm];
+	double las = 0.;	///< Standard deviation apical zone [cm];
+	double a = 0.1; 		///< Root radius [cm]
     double as = 0.; 		///< Standard deviation root radius [cm]
     double dx = 0.25; 		///< Maximal segment size [cm]
 	double dxMin = 1e-6; 	///< threshold value, smaller segments will be skipped (otherwise stem tip direction can become NaN)

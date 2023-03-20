@@ -48,9 +48,14 @@ Vector3d Tropism::getPosition(const Vector3d& pos, const Matrix3d& old, double a
  */
 Vector2d Tropism::getUCHeading(const Vector3d& pos, const Matrix3d& old, double dx, const std::shared_ptr<Organ> o, int nodeIdx)
 {
+	
     double a = sigma*randn(nodeIdx)*sqrt(dx);
     double b = rand(nodeIdx)*2*M_PI;
     double v;
+	bool isLbLeaf =( (o->organType()==Organism::ot_leaf)&&((o->getLength(nodeIdx-1)+dx)<= o->getParam()->lb)); //in leaf basal zone
+
+	auto f_gf = std::make_shared<AntiGravitropism>(o->getOrganism()->shared_from_this(),o->getOrganRandomParameter()->tropismN, o->getOrganRandomParameter()->tropismS);
+	//this->createTropismFunction(rp->tropismT, o->param()->tropismN, o->param()->tropismS);
 
     double n_=n*sqrt(dx);
     if (n_>0) {
@@ -62,11 +67,23 @@ Vector2d Tropism::getUCHeading(const Vector3d& pos, const Matrix3d& old, double 
         }
         double bestA = a;
         double bestB = b;
-        double bestV = this->tropismObjective(pos,old,a,b,dx,o);
+        double bestV ;
+		if(isLbLeaf)
+		{
+			bestV = f_gf->tropismObjective(pos,old,a,b,dx,o);
+		}else{
+			bestV = this->tropismObjective(pos,old,a,b,dx,o);
+		}
         for (int i=0; i<n_; i++) {
             b = rand(nodeIdx)*2*M_PI;
             a = sigma*randn(nodeIdx)*sqrt(dx);
-            v = this->tropismObjective(pos,old,a,b,dx,o);
+            //v = this->tropismObjective(pos,old,a,b,dx,o);
+			if(isLbLeaf)
+			{
+				v = f_gf->tropismObjective(pos,old,a,b,dx,o);
+			}else{
+				v =  this->tropismObjective(pos,old,a,b,dx,o);
+			}
             if (v<bestV) {
                 bestV=v;
                 bestA=a;
@@ -98,6 +115,7 @@ Vector2d Tropism::getHeading(const Vector3d& pos, const Matrix3d& old, double dx
     Vector2d h = this->getUCHeading(pos, old, dx, o, nodeIdx);
     double a = h.x;
     double b = h.y;
+	
 
     if (!geometry.expired()) {
         double d = geometry.lock()->getDist(this->getPosition(pos,old,a,b,dx));

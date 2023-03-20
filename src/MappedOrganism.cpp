@@ -17,7 +17,7 @@ namespace CPlantBox {
 		MirrorIterator(const std::vector<double>* v) : v(v) {
 			//std::cout << "MirrorIterator was created " << v->size() << std::endl;
 			// output all vector elements
-      std::copy(v->begin(), v->end(), std::ostream_iterator<double>(std::cout, " ")); std::cout << std::endl;
+      // std::copy(v->begin(), v->end(), std::ostream_iterator<double>(std::cout, " ")); std::cout << std::endl;
 		}
 		std::pair<int,double> operator*() { return std::make_pair(idx(), v->at(i)); }
 		MirrorIterator& operator++() { inc(); return *this; }
@@ -979,7 +979,8 @@ void MappedPlant::ComputeGeometryForOrgan(int organId)
 
 void MappedPlant::ComputeGeometryForOrganType(int organType)
 {
-  auto organ_list = this->getOrgans(organType, false);
+  auto organ_list = this->getOrgans(-1, false);
+		
   // First we check if we have enough memory to support the geometry
   unsigned int point_space = 0;
   unsigned int cell_space = 0;
@@ -993,9 +994,12 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 			if(organ->organType() == 4)
 			{
 				// 4 SHOULD mean leaf, so we do not check for successful cast
-				point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
-				cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
-				point_space += (organ->getNumberOfNodes()) * 4 * 3;
+				if(bIncludeMidlineInLeaf)
+				{
+				  point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
+				  cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
+				}
+			  point_space += (organ->getNumberOfNodes()) * 4 * 3;
 				cell_space += ((organ->getNumberOfNodes()) - 1) * 4 * 3 + 40;
 			}
 			else
@@ -1006,6 +1010,12 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 		}
   }
   //std::cout << "Going to allocate " << point_space << " points and " << cell_space << " cells" << std::endl;
+  geometry.clear();
+  geometryNormals.clear();
+  geometryColors.clear();
+  geometryIndices.clear();
+  geometryTextureCoordinates.clear();
+  geometryNodeIds.clear();
   geometry.reserve(point_space);
   geometryNormals.reserve(point_space);
   geometryColors.reserve(point_space / 3 * 2);
@@ -1022,7 +1032,7 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
     checked_organs++;
 		//std::cout << "Going through organ " << organ->getId() << std::endl;
 
-    if((organType >= 0 && organ->organType() != organType) || organ->getNumberOfNodes() <= 1)
+    if((organType >= 1 && organ->organType() != organType) || organ->getNumberOfNodes() <= 1)
     {
       continue;
     }
@@ -1032,7 +1042,10 @@ void MappedPlant::ComputeGeometryForOrganType(int organType)
 			// render petiole
       //std::cout << "Generating geometry for leaf " << organ->getId() << " with " << organ->getNumberOfNodes() << " nodes." << std::endl;
       //std::cout << "Stem part for petiole and rest" << std::endl;
-      GenerateStemGeometry(organ, point_space, cell_space);
+			if(bIncludeMidlineInLeaf)
+			{
+        GenerateStemGeometry(organ, point_space, cell_space);
+			}
       //std::cout << "Updating buffer positions because the leaf is a two-parter" << std::endl;
       //point_space += organ->getNumberOfNodes() * 3 * geometry_resolution;
       //cell_space += (organ->getNumberOfNodes() - 1) * 6 * geometry_resolution;
@@ -1190,14 +1203,8 @@ void MappedPlant::GenerateLeafGeometry(std::shared_ptr<Leaf> leaf, unsigned int 
       //std::cout << "Done" << std::endl;
 }
 
-
 void MappedPlant::GenerateStemGeometry(std::shared_ptr<Organ> stem, unsigned int p_o, unsigned int c_o)
 {
-  // if the stem is a leaf and we don't want to include the midline of the leaf, we skip it
-  if(stem->organType() == Organism::ot_leaf && !bIncludeMidlineInLeaf)
-  {
-    return;
-  }
   //std::cout << "Generating Stem for " << stem->getId() << " and reserving buffers" << std::endl;
 	geometry.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometry.size()),-1.0);
 	geometryNormals.resize(std::max(static_cast<std::size_t>(p_o + (stem->getNumberOfNodes() * geometry_resolution * 3)), geometryNormals.size()),-1.0);
@@ -1309,7 +1316,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
   int last_amount = -1;
   int last_non_petiole = -1;
   double r_max = std::numeric_limits<float>::lowest();
-  std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
+  //std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
   for (auto i = 0; i < outer_geometry_points.size(); ++i)
   {
 		MirrorIterator helper(&(outer_geometry_points[i]));
@@ -1347,7 +1354,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       last_amount = current_amount;
     }
   }
-  std::cout << "Resizing geometry buffers by " << point_buffer << " points and " << index_buffer << " triangle values." << std::endl;
+  //std::cout << "Resizing geometry buffers by " << point_buffer << " points and " << index_buffer << " triangle values." << std::endl;
   // increase geometry buffers
   this->geometry.resize(std::max(static_cast<std::size_t>(p_o + point_buffer * 3), this->geometry.size()),-1.0);
 	this->geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + index_buffer), this->geometryIndices.size()),static_cast<unsigned int>(-1));
@@ -1400,7 +1407,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		const Vector3d first_node = leaf->getNode(0);
 		const Vector3d first_estimated = midVein(0);
 		const auto first_distance = (first_node - first_estimated).length();
-		std::cout << "First distance is " << first_distance << std::endl;
+		//std::cout << "First distance is " << first_distance << std::endl;
     
     for(int p = 0; p < helper.size(); ++p)
     {
@@ -1420,11 +1427,13 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       {
         z_offset *= std::sin((2.0 * random_factor_2 + 2.0) * l / M_PI + M_PI);
       }
-			const Vector3d base_direction = r * Vector3d(0.0, 1.0, 0.0);
+			const Vector3d base_direction = 1.5 * r * Vector3d(0.0, 1.0, 0.0);
+			// scale with width
+			
 			//std::cout << base_direction.toString() << std::endl;
 			Vector3d updated_direction = local_q.Rotate(base_direction);
 			updated_direction = (updated_direction.length() > min_radius) ? updated_direction : min_radius * updated_direction.normalized();
-			const Vector3d point = midpoint + updated_direction + up * z_offset;
+			const Vector3d point = midpoint + updated_direction; //+ up * z_offset;
       //std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
@@ -1446,7 +1455,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 			// increase buffer
 			p_o += 3;
     }
-    std::cout << std::endl;
+    //std::cout << std::endl;
     //std::cout << std::endl << "Generating the triangles for the current line intersection " << i << "(" << current.size() << ")" << std::endl;
     if(i > last_non_petiole && last_non_petiole >= 0)
     {
@@ -1541,7 +1550,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 					geometry[p_o + 0] = midpoint.x;
 					geometry[p_o + 1] = midpoint.y;
 					geometry[p_o + 2] = midpoint.z;
-          std::cout << " which is smaller to the last one" << std::endl;
+          //std::cout << " which is smaller to the last one" << std::endl;
           auto diff = last_amount - current_amount;
           for(auto j = 0; j < last_amount/2 -diff - 1; ++j)
           {

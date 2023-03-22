@@ -977,7 +977,7 @@ void MappedPlant::ComputeGeometryForOrgan(int organId)
   }
 }
 
-void MappedPlant::ComputeGeometryForOrganType(int organType)
+void MappedPlant::ComputeGeometryForOrganType(int organType, bool clear_first)
 {
   auto organ_list = this->getOrgans(-1, false);
 		

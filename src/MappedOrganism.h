@@ -179,7 +179,7 @@ public:
    * This merges the individual organs into one geometry!
    * @param organType the type of the organ
   */
-  void ComputeGeometryForOrganType(int organType);
+  void ComputeGeometryForOrganType(int organType, bool clear_first = true);
   /**
    * Compute the geometry of the whole plant
    * This merges the individual organs into one geometry!

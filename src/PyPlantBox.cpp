@@ -957,7 +957,7 @@ PYBIND11_MODULE(plantbox, m) {
 			.def_readwrite("bladeLength",  &MappedPlant::bladeLength)
 			.def("getNodeIds",&MappedPlant::getNodeIds)
       .def("ComputeGeometryForOrgan",&MappedPlant::ComputeGeometryForOrgan, py::arg("organId"))
-      .def("ComputeGeometryForOrganType",&MappedPlant::ComputeGeometryForOrganType)
+      .def("ComputeGeometryForOrganType",&MappedPlant::ComputeGeometryForOrganType, py::arg("organType"), py::arg("clear_first") = false)
       .def("ComputeGeometry",&MappedPlant::ComputeGeometry)
       .def("GetGeometry",&MappedPlant::GetGeometry)
       .def("GetGeometryColors",&MappedPlant::GetGeometryColors)

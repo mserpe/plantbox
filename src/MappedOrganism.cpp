@@ -1010,18 +1010,21 @@ void MappedPlant::ComputeGeometryForOrganType(int organType, bool clear_first)
 		}
   }
   //std::cout << "Going to allocate " << point_space << " points and " << cell_space << " cells" << std::endl;
-  geometry.clear();
-  geometryNormals.clear();
-  geometryColors.clear();
-  geometryIndices.clear();
-  geometryTextureCoordinates.clear();
-  geometryNodeIds.clear();
-  geometry.reserve(point_space);
-  geometryNormals.reserve(point_space);
-  geometryColors.reserve(point_space / 3 * 2);
-  geometryIndices.reserve(cell_space);
-  geometryTextureCoordinates.reserve(point_space);
-  geometryNodeIds.reserve(point_space / 3 + 1);
+  if(clear_first)
+  {
+    geometry.clear();
+    geometryNormals.clear();
+    geometryColors.clear();
+    geometryIndices.clear();
+    geometryTextureCoordinates.clear();
+    geometryNodeIds.clear();
+  }
+  geometry.reserve(geometry.size() + point_space);
+  geometryNormals.reserve(geometryNormals.size() + point_space);
+  geometryColors.reserve(geometryColors.size() + (point_space / 3 * 2));
+  geometryIndices.reserve(geometryIndices.size() + cell_space);
+  geometryTextureCoordinates.reserve(geometryTextureCoordinates.size() + point_space);
+  geometryNodeIds.reserve(geometryNodeIds.size() + point_space / 3 + 1);
 
 
   point_space = 0;

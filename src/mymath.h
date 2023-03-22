@@ -670,6 +670,8 @@ class CatmullRomSpline
     return Quaternion::FromForward(v);
   }
 
+  
+
   private:
   // start and end time of the spline
   double t0, t1;

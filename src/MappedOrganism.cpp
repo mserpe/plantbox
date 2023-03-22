@@ -17,7 +17,7 @@ namespace CPlantBox {
 		MirrorIterator(const std::vector<double>* v) : v(v) {
 			//std::cout << "MirrorIterator was created " << v->size() << std::endl;
 			// output all vector elements
-      std::copy(v->begin(), v->end(), std::ostream_iterator<double>(std::cout, " ")); std::cout << std::endl;
+      // std::copy(v->begin(), v->end(), std::ostream_iterator<double>(std::cout, " ")); std::cout << std::endl;
 		}
 		std::pair<int,double> operator*() { return std::make_pair(idx(), v->at(i)); }
 		MirrorIterator& operator++() { inc(); return *this; }
@@ -1297,7 +1297,8 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 	// get leaf random parameter
 	auto lrp = leaf->getLeafRandomParameter();
 	auto stem = leaf->getParent();
-	auto min_radius = stem->getParameter("radius");
+	auto min_radius = stem->getParameter("radius") / 2.0;
+	auto max_radius = stem->getParameter("radius");
 
   // std::cout << "Invoking create leaf radial geometry for leaf " << leaf->getId() << std::endl;
 
@@ -1316,7 +1317,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
   int last_amount = -1;
   int last_non_petiole = -1;
   double r_max = std::numeric_limits<float>::lowest();
-  std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
+  // std::cout << "Counting how much space we need for the leaf geometry" << std::endl;
   for (auto i = 0; i < outer_geometry_points.size(); ++i)
   {
 		MirrorIterator helper(&(outer_geometry_points[i]));
@@ -1354,7 +1355,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       last_amount = current_amount;
     }
   }
-  std::cout << "Resizing geometry buffers by " << point_buffer << " points and " << index_buffer << " triangle values." << std::endl;
+  // std::cout << "Resizing geometry buffers by " << point_buffer << " points and " << index_buffer << " triangle values." << std::endl;
   // increase geometry buffers
   this->geometry.resize(std::max(static_cast<std::size_t>(p_o + point_buffer * 3), this->geometry.size()),-1.0);
 	this->geometryIndices.resize(std::max(static_cast<std::size_t>(c_o + index_buffer), this->geometryIndices.size()),static_cast<unsigned int>(-1));
@@ -1396,8 +1397,10 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		//auto lowest_possible_spline = std::find(midVein.getSplines().begin(), midVein.getSplines().end(), [l](auto spline) {return spline.getT0() < l; });
 		
 	  // input points, normaly, ids, texture coordinates
-    // iterate through the points
+    // iterate through the points FromForwardAndUp 
 		Quaternion local_q = select_spline.computeOrientation(t);
+		const Vector3d derivative = select_spline.derivative(t);
+		local_q = Quaternion::FromForwardAndUp(derivative, last_orientation.Up());
 		auto up = local_q.Up();
     // iterate through the points
     //std::cout << "Iterating through the points of the current line intersection " << i << std::endl;
@@ -1407,7 +1410,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		const Vector3d first_node = leaf->getNode(0);
 		const Vector3d first_estimated = midVein(0);
 		const auto first_distance = (first_node - first_estimated).length();
-		std::cout << "First distance is " << first_distance << std::endl;
+		// std::cout << "First distance is " << first_distance << std::endl;
     
     for(int p = 0; p < helper.size(); ++p)
     {
@@ -1427,11 +1430,18 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
       {
         z_offset *= std::sin((2.0 * random_factor_2 + 2.0) * l / M_PI + M_PI);
       }
-			const Vector3d base_direction = r * Vector3d(0.0, 1.0, 0.0);
+      const double scaling_factor = leaf->getParameter("areaMax") / leaf->getParameter("lmax");
+			const Vector3d base_direction = scaling_factor * r * Vector3d(0.0, 1.0, 0.0);
 			//std::cout << base_direction.toString() << std::endl;
 			Vector3d updated_direction = local_q.Rotate(base_direction);
+
 			updated_direction = (updated_direction.length() > min_radius) ? updated_direction : min_radius * updated_direction.normalized();
-			const Vector3d point = midpoint + updated_direction + up * z_offset;
+			if(i == 0)
+			{
+				// ensure max scaling for first noce
+				updated_direction = (updated_direction.length() > max_radius) ? max_radius * updated_direction.normalized() : updated_direction;
+			}
+			const Vector3d point = midpoint + updated_direction;
       //std::cout << "V: " << point.toString() << "; ";
       // set the point
       //std::cout << "p" << " ";
@@ -1453,7 +1463,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 			// increase buffer
 			p_o += 3;
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
     //std::cout << std::endl << "Generating the triangles for the current line intersection " << i << "(" << current.size() << ")" << std::endl;
     if(i > last_non_petiole && last_non_petiole >= 0)
     {
@@ -1548,7 +1558,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 					geometry[p_o + 0] = midpoint.x;
 					geometry[p_o + 1] = midpoint.y;
 					geometry[p_o + 2] = midpoint.z;
-          std::cout << " which is smaller to the last one" << std::endl;
+          // std::cout << " which is smaller to the last one" << std::endl;
           auto diff = last_amount - current_amount;
           for(auto j = 0; j < last_amount/2 -diff - 1; ++j)
           {
@@ -1586,7 +1596,7 @@ void MappedPlant::GenerateRadialLeafGeometry(std::shared_ptr<Leaf> leaf, unsigne
 		last_orientation = local_q;
 		last_position = midpoint;
 	}
-	std::cout << "In the end I ended up adding " << c_o - start_c_o << " where I thought I'd add " << index_buffer << std::endl;
+	// std::cout << "In the end I ended up adding " << c_o - start_c_o << " where I thought I'd add " << index_buffer << std::endl;
 }
 
 void MappedPlant::GenerateRadialLeafGeometryFromPhi(std::shared_ptr<Leaf> leaf, unsigned int p_o, unsigned int c_o)

@@ -129,29 +129,14 @@ target_include_directories(
 # 2. Make CPlantBox Pyhthon binding
 #
 
-# find_package(pybind11 REQUIRED) 
+#
 #set(PYBIND11_PYTHON_VERSION 3.7)
 find_package( PythonInterp 3.7 REQUIRED )
 find_package( PythonLibs 3.7 REQUIRED )
 
-#taken from: https://github.com/smrfeld/cmake_cpp_pybind11_tutorial
-include(FetchContent)
 
-set(FETCHCONTENT_QUIET FALSE)
-
-FetchContent_Declare(
-    pybind11
-    URL https://github.com/pybind/pybind11/archive/refs/tags/v2.10.4.tar.gz
-    )
-
-FetchContent_GetProperties(pybind11)
-
-if(NOT pybind11_POPULATED)
-    FetchContent_Populate(pybind11)
-    add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-endif()
 #add_subdirectory(external/pybind11)
-
+find_package(pybind11 REQUIRED) 
 pybind11_add_module(plantbox SHARED 
 			PyPlantBox.cpp   								
 			)

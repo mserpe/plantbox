@@ -811,10 +811,10 @@ bool Organ::getApplyHere(int i) const
 	if((rp->successorWhere.size()>i)&&(rp->successorWhere.at(i).size()>0)){
 			if(!std::signbit(rp->successorWhere.at(i).at(0)))//true if number is signed
 			{//gave which linking nodes to include
-				applyHere = (std::find (rp->successorWhere.at(i).begin(), rp->successorWhere.at(i).end(), created_linking_node)
+				applyHere = (find (rp->successorWhere.at(i).begin(), rp->successorWhere.at(i).end(), created_linking_node)
 				!= rp->successorWhere.at(i).end());
 			}else{//gave which linking nodes to ignore
-				applyHere = !(std::find (rp->successorWhere.at(i).begin(), rp->successorWhere.at(i).end(), -double(created_linking_node))
+				applyHere = !(find (rp->successorWhere.at(i).begin(), rp->successorWhere.at(i).end(), -double(created_linking_node))
 				!= rp->successorWhere.at(i).end());
 			}
 			
@@ -901,5 +901,16 @@ bool Organ::hasRelCoord() const
 	}
 	bool isBasalRoot = ((organType() == Organism::ot_root)&&basalOrgan);
 	return (nullNode0&&(!isBasalRoot)&&(!isSeed));
-}										   
+}	
+
+template<class InputIt, class T>
+InputIt Organ::find(InputIt first, InputIt last, const T& value) const
+{
+    for (; first != last; ++first)
+        if (*first == value)
+            return first;
+ 
+    return last;
+}
+									   
 }

@@ -114,6 +114,8 @@ public:
 	/* for carbon-limited growth (know future (or past) volume (or length))*/
 	virtual double orgVolume(double length_ = -1.,  bool realized = false) const;//organ volume for current or for a specific length
 	virtual double orgVolume2Length(double volume_){return volume_/(M_PI * getParameter("radius")* getParameter("radius"));}	//organ length for specific volume
+	template<class InputIt, class T>
+	InputIt find(InputIt first, InputIt last, const T& value) const;
 protected:
 
     Vector3d partialIHeading;

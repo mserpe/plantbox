@@ -106,6 +106,7 @@ os.chdir("CPB")
 if not os.path.exists("CPlantBox"):
     git_clone('https://github.com/Plant-Root-Soil-Interactions-Modelling/CPlantBox.git', branch = 'master')
     os.chdir("CPlantBox")
+    subprocess.run(['git', 'submodule', 'add', '-b', 'stable', '../../pybind/pybind11', 'src/external/pybind11'])
     subprocess.run(['cmake', '.']) 
     subprocess.run(['make']) 
     os.chdir("..")

@@ -6,6 +6,7 @@ include_directories(structural)
 include_directories(functional)
 
 include_directories(external/tinyxml2)
+list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/python3.10/dist-packages pip")
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 link_libraries (Eigen3::Eigen)
 
